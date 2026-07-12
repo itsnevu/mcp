@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "boar-basic": {
+      "type": "http",
+      "url": "https://mcp.boar.network/basic"
+    },
+    "boar-advanced": {
+      "type": "http",
+      "url": "https://mcp.boar.network/advanced"
+    },
+    "blockscout": {
+      "url": "https://blockscout.mcp.junct.dev/mcp",
+      "transport": "streamable-http"
+    },
+    "boo-crypto": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "boo-crypto-mcp"
+      ]
+    },
+    "fuse": {
+      "url": "https://mcp.fuse.io/mcp"
+    },
+    "whale-intel": {
+      "url": "https://mcp.swisswhaleintelligence.com/mcp"
+    },
+    "etherscan": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "etherscan-mcp-server"
+      ]
+    },
+    "hoodpocket": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "hoodpocket"
+      ]
+    },
+    "hooddomains": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "hooddomains-mcp"
+      ],
+      "env": {
+        "HOOD_RPC_URL": "https://rpc.mainnet.chain.robinhood.com"
+      }
+    },
+    "dexscreener": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@iflow-mcp/janswist-dexscreener-mcp-server"
+      ]
+    }
+  }
+}

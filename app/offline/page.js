@@ -2,7 +2,7 @@ import Link from "next/link";
 import { APP_NAME } from "@/lib/chatContract";
 
 export const metadata = {
-  title: `Offline — ${APP_NAME}`,
+  title: `Offline | ${APP_NAME}`,
 };
 
 export default function OfflinePage() {

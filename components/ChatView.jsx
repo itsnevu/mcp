@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Widget from "./Widgets";
 import { renderRich, fmtTime, replyToText } from "@/lib/text";
 
@@ -88,8 +88,54 @@ export default function ChatView({
   showToast,
   scrollBottom,
 }) {
+  const [modelOpen, setModelOpen] = useState(false);
+  const [activeModel, setActiveModel] = useState("Bugglo V1");
+  const modelRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (modelRef.current && !modelRef.current.contains(e.target)) {
+        setModelOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const MODELS = [
+    { id: "Bugglo V1", desc: "The ultimate on-chain intelligence agent." },
+    { id: "Bugglo Pro", desc: "Advanced reasoning and unlimited context." },
+    { id: "Claude 3.5 Sonnet", desc: "Anthropic's fastest and most intelligent model." },
+    { id: "Fable", desc: "Specialized for narrative generation." },
+    { id: "GPT-4o", desc: "OpenAI's latest flagship model." }
+  ];
+
   return (
     <div className="chat-wrap">
+      <div className="model-selector-wrap" ref={modelRef}>
+        <button className="model-btn" onClick={() => setModelOpen(!modelOpen)}>
+          {activeModel}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        {modelOpen && (
+          <div className="model-popover">
+            {MODELS.map(m => (
+              <button 
+                key={m.id} 
+                className={"model-item" + (activeModel === m.id ? " active" : "")}
+                onClick={() => { setActiveModel(m.id); setModelOpen(false); }}
+              >
+                <div className="model-item-title">
+                  {m.id}
+                  {activeModel === m.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: "var(--accent)"}}><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <div className="model-item-desc">{m.desc}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {messages.map((m) =>
         m.role === "user" ? (
           <UserMessage key={m.id} msg={m} />

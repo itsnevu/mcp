@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SvgSprite from "./SvgSprite";
 import Sidebar from "./Sidebar";
@@ -11,6 +12,8 @@ import SettingsModal from "./SettingsModal";
 import { demoAgent } from "@/lib/demoAgent";
 import { replyToText, isValidReply } from "@/lib/text";
 import { APP_NAME, isValidChatResponse } from "@/lib/chatContract";
+import { useAuth } from "./AuthGate";
+import { useI18n } from "@/lib/I18nContext";
 
 const LS_STATE = "hoodscope.state.v1";
 
@@ -61,11 +64,16 @@ export default function HoodScopeApp() {
   const [awaiting, setAwaiting] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isIncognito, setIsIncognito] = useState(false);
   const [backendStatus, setBackendStatus] = useState({ kind: "demo", label: "Demo mode" });
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const [mode, setModeState] = useState("Auto");
   const [theme, setTheme] = useState("dark");
+  const [guestPromptCount, setGuestPromptCount] = useState(0);
+
+  const auth = useAuth();
+  const { t, activeLang, setActiveLang, languages } = useI18n();
 
   const busyRef = useRef(false);
   const seqRef = useRef(0); // generation token — bumping it invalidates in-flight sends
@@ -79,7 +87,9 @@ export default function HoodScopeApp() {
   const toastTimer = useRef(null);
 
   const chatting = activeId !== null;
-  const activeMessages = chats.find((c) => c.id === activeId)?.messages ?? [];
+  const activeChat = chats.find((c) => c.id === activeId);
+  const activeMessages = activeChat?.messages ?? [];
+  const currentIncognito = activeChat ? activeChat.incognito : isIncognito;
 
   useEffect(() => {
     chatsRef.current = chats;
@@ -91,8 +101,12 @@ export default function HoodScopeApp() {
     try {
       const m = localStorage.getItem("hoodscope.mode") || localStorage.getItem("ranger.mode");
       if (m) setModeState(m);
+      const savedTheme = localStorage.getItem("hoodscope.theme") || "dark";
+      setTheme(savedTheme);
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      const g = parseInt(localStorage.getItem("hoodscope.guest_prompts") || "0", 10);
+      setGuestPromptCount(isNaN(g) ? 0 : g);
     } catch {}
-    setTheme(document.documentElement.getAttribute("data-theme") || "dark");
     if (window.innerWidth <= 780) setCollapsed(true); // don't cover mobile screens by default
     setHydrated(true);
   }, []);
@@ -101,7 +115,7 @@ export default function HoodScopeApp() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(LS_STATE, JSON.stringify({ chats }));
+      localStorage.setItem(LS_STATE, JSON.stringify({ chats: chats.filter(c => !c.incognito) }));
     } catch {}
   }, [chats, hydrated]);
 
@@ -145,6 +159,16 @@ export default function HoodScopeApp() {
       return false;
     }
   }, []);
+
+  const onSaveBackend = useCallback(async (url) => {
+    try {
+      localStorage.setItem("hoodscope.backend", url);
+    } catch {}
+    const ok = await checkHealth();
+    if (ok) showToast("Backend updated and connected.");
+    else showToast("Backend is offline or unreachable.");
+  }, [checkHealth, showToast]);
+
   useEffect(() => {
     checkHealth();
   }, [checkHealth]);
@@ -162,8 +186,20 @@ export default function HoodScopeApp() {
   const goHome = useCallback(() => {
     releaseUi();
     setActiveId(null);
+    setIsIncognito(false);
     setDraft("");
     inputRef.current?.focus();
+  }, [releaseUi]);
+
+  const goIncognito = useCallback(() => {
+    setIsIncognito((prev) => {
+      const next = !prev;
+      releaseUi();
+      setActiveId(null);
+      setDraft("");
+      inputRef.current?.focus();
+      return next;
+    });
   }, [releaseUi]);
 
   const loadChat = useCallback(
@@ -213,6 +249,11 @@ export default function HoodScopeApp() {
     });
   }, []);
 
+  const changeLanguage = useCallback((lang) => {
+    setActiveLang(lang);
+    try { localStorage.setItem("hoodscope.lang", lang); } catch {}
+  }, []);
+
   const onTypingDone = useCallback(() => {
     busyRef.current = false;
     setBusy(false);
@@ -224,11 +265,23 @@ export default function HoodScopeApp() {
     fetchCtrlRef.current?.abort();
   }, []);
 
-  /* ── send ── */
   const send = useCallback(
     async (rawText) => {
       const text = String(rawText || "").trim();
       if (!text || busyRef.current) return;
+      
+      if (auth?.user?.provider === 'guest' && guestPromptCount >= 3) {
+        showToast("Guest limit reached. Please log in to continue.");
+        setTimeout(() => auth.logout(), 2500); // Kick back to auth
+        return;
+      }
+      
+      if (auth?.user?.provider === 'guest') {
+        const newCount = guestPromptCount + 1;
+        setGuestPromptCount(newCount);
+        try { localStorage.setItem("hoodscope.guest_prompts", newCount.toString()); } catch {}
+      }
+
       busyRef.current = true;
       setBusy(true);
       abortTypingRef.current = false;
@@ -242,7 +295,7 @@ export default function HoodScopeApp() {
       if (!id) {
         id = "c" + now.toString(36) + Math.random().toString(36).slice(2, 6);
         setChats((prev) => [
-          { id, title: text.length > 26 ? text.slice(0, 26) + "…" : text, messages: [userMsg] },
+          { id, title: text.length > 26 ? text.slice(0, 26) + "…" : text, messages: [userMsg], incognito: isIncognito },
           ...prev,
         ]);
         setActiveId(id);
@@ -334,7 +387,7 @@ export default function HoodScopeApp() {
       // Otherwise busy is released by onTypingDone when the typewriter ends.
       if (!stillCurrent) return;
     },
-    [activeId, mode, showToast]
+    [activeId, mode, showToast, auth, guestPromptCount, isIncognito]
   );
 
   const onSuggest = useCallback(
@@ -347,17 +400,6 @@ export default function HoodScopeApp() {
       }
     },
     [send]
-  );
-
-  const onSaveBackend = useCallback(
-    async (url) => {
-      try {
-        localStorage.setItem("hoodscope.backend", url);
-      } catch {}
-      const ok = await checkHealth();
-      showToast(ok ? "Backend reachable" : "Backend unreachable — demo mode");
-    },
-    [checkHealth, showToast]
   );
 
   /* ── global shortcuts ── */
@@ -395,6 +437,7 @@ export default function HoodScopeApp() {
       docked={docked}
       inputRef={inputRef}
       showToast={showToast}
+      isIncognito={isIncognito}
     />
   );
 
@@ -405,13 +448,17 @@ export default function HoodScopeApp() {
         <Sidebar
           chats={chats}
           activeId={activeId}
-          collapsed={collapsed}
-          onCollapse={() => setCollapsed(true)}
-          onNewChat={goHome}
           onLoadChat={loadChat}
+          onNewChat={goHome}
           onDeleteChat={deleteChat}
-          onSuggest={onSuggest}
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          onIncognitoChat={goIncognito}
+          onSuggest={send}
           onOpenSettings={() => setSettingsOpen(true)}
+          activeLang={activeLang}
+          setActiveLang={changeLanguage}
+          languages={languages}
         />
         {!collapsed && <div className="sidebar-backdrop" onClick={() => setCollapsed(true)} />}
         <button
@@ -435,72 +482,97 @@ export default function HoodScopeApp() {
           <div className="main-scroll" ref={scrollRef}>
             {!chatting ? (
               <div className="home-wrap">
-                <div className="hero">
-                  <div className="hero-logo">
-                    <Image src="/logo-512.png" alt={`${APP_NAME} logo`} width={84} height={84} priority />
+                {isIncognito ? (
+                  <div className="incognito-hero">
+                    <div className="hero-logo" style={{ background: "transparent", color: "var(--text)", boxShadow: "none", animation: "none" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 42, height: 42 }}>
+                        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+                      </svg>
+                    </div>
+                    <div className="hero-title-row" style={{ justifyContent: "center" }}>
+                      <div className="hero-title" style={{ fontWeight: 400, letterSpacing: "-0.02em" }}>{t("app.incognitoTitle")}</div>
+                    </div>
                   </div>
-                  <div className="hero-title-row">
-                    <div className="hero-title">{APP_NAME}</div>
-                    <div className="beta-pill">BETA</div>
+                ) : (
+                  <div className="hero">
+                    <div className="hero-logo">
+                      <Image src="/logo-512.png" alt={`${APP_NAME} logo`} width={84} height={84} priority />
+                    </div>
+                    <div className="hero-title-row">
+                      <div className="hero-title">{APP_NAME}</div>
+                      <div className="beta-pill">BETA</div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="hero-sub">
-                  What&apos;s moving on <span className="accent">Robinhood Chain</span>?
-                </div>
+                {!isIncognito && (
+                  <div className="hero-sub">
+                    What&apos;s moving on <span className="accent">Robinhood Chain</span>?
+                  </div>
+                )}
 
                 {inputBar(false)}
 
-                <div className="try-label">Try one of these</div>
-                <div className="try-grid">
-                  {TRY_CARDS.map((c) => (
-                    <button className="try-card" key={c.q} onClick={() => onSuggest(c.q)}>
-                      <div className="card-icon">
-                        <svg viewBox="0 0 24 24">
-                          <use href={`#${c.icon}`} />
-                        </svg>
-                      </div>
-                      <div className="card-title">
-                        {c.title[0]}
-                        <br />
-                        {c.title[1]}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                {isIncognito ? (
+                  <div className="incognito-disclaimer">
+                    {t("app.incognitoDesc1")}<br/>
+                    <Link href="/learn">{t("app.learnMore")}</Link> {t("app.incognitoDesc2")}
+                  </div>
+                ) : (
+                  <>
+                    <div className="try-label">{t("app.tryThese")}</div>
+                    <div className="try-grid">
+                      {TRY_CARDS.map((c) => (
+                        <button className="try-card" key={c.q} onClick={() => onSuggest(c.q)}>
+                          <div className="card-icon">
+                            <svg viewBox="0 0 24 24">
+                              <use href={`#${c.icon}`} />
+                            </svg>
+                          </div>
+                          <div className="card-title">
+                            {c.title[0]}
+                            <br />
+                            {c.title[1]}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
 
-                <button
-                  className="x-banner"
-                  onClick={() =>
-                    window.open(
-                      "https://x.com/intent/tweet?text=" +
-                        encodeURIComponent("What's moving on Robinhood Chain today?"),
-                      "_blank",
-                      "noopener,noreferrer"
-                    )
-                  }
-                >
-                  <div className="x-badge">
-                    <svg viewBox="0 0 24 24">
-                      <use href="#i-x" />
-                    </svg>
-                  </div>
-                  <div className="x-banner-text">
-                    <span className="new-tag">NEW</span> · Share a Robinhood Chain question on 𝕏
-                  </div>
-                  <div className="x-banner-arrow">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="7" y1="17" x2="17" y2="7" />
-                      <polyline points="7 7 17 7 17 17" />
-                    </svg>
-                  </div>
-                </button>
+                {!isIncognito && (
+                  <button
+                    className="x-banner"
+                    onClick={() =>
+                      window.open(
+                        "https://x.com/intent/tweet?text=" +
+                          encodeURIComponent("What's moving on Robinhood Chain today?"),
+                        "_blank",
+                        "noopener,noreferrer"
+                      )
+                    }
+                  >
+                    <div className="x-badge">
+                      <svg viewBox="0 0 24 24">
+                        <use href="#i-x" />
+                      </svg>
+                    </div>
+                    <div className="x-banner-text">
+                      <span className="new-tag">NEW</span> &middot; Share a Robinhood Chain question on 𝕏
+                    </div>
+                    <div className="x-banner-arrow">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="7" y1="17" x2="17" y2="7" />
+                        <polyline points="7 7 17 7 17 17" />
+                      </svg>
+                    </div>
+                  </button>
+                )}
 
                 <div className="home-footer">
                   <div className="disclaimer">
-                    Information provided may be inaccurate or incorrect.
-                    <br />
-                    By messaging {APP_NAME}, you agree to our <a href="/terms">Terms</a>, <a href="/privacy">Privacy Policy</a>, and <a href="/docs">Docs</a>.
+                    {t("app.infoWarning")}<br />
+                    {t("app.byMessaging")} <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Policy</Link>, and <Link href="/docs">Docs</Link>.
                   </div>
                   <button className="theme-toggle" onClick={toggleTheme}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -541,6 +613,11 @@ export default function HoodScopeApp() {
         backendStatus={backendStatus}
         onSaveTest={onSaveBackend}
         onClearChats={clearAllChats}
+        theme={theme}
+        onThemeChange={toggleTheme}
+        activeLang={activeLang}
+        onLangChange={changeLanguage}
+        languages={languages}
       />
       <div className={"toast" + (toastShow ? " show" : "")}>{toastMsg}</div>
     </>

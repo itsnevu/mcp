@@ -22,7 +22,7 @@ function saveConsent(analytics, marketing) {
       JSON.stringify({ essential: true, analytics, marketing, decidedAt: new Date().toISOString() })
     );
   } catch {
-    // localStorage unavailable (private mode) — the banner will simply reappear next visit
+    // localStorage unavailable (private mode) - the banner will simply reappear next visit
   }
 }
 

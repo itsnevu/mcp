@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { APP_NAME } from "@/lib/chatContract";
 import styles from "./intro.module.css";
 
@@ -26,11 +27,11 @@ The flagged prior launch and the concentrated top holders are the main concerns.
       },
       {
         role: "user",
-        text: "Yes — anything suspicious in their history?",
+        text: "Yes - anything suspicious in their history?",
       },
       {
         role: "agent",
-        text: `Deployer 0x91b4…e07a has been active for 8 months. Of 6 launches, 4 traded normally, 1 was abandoned early, and 1 (Feb 2026) shows a honeypot signature — buys succeeded while sells reverted for 26 hours before liquidity was pulled. I'd treat anything from this deployer as high-scrutiny.`,
+        text: `Deployer 0x91b4…e07a has been active for 8 months. Of 6 launches, 4 traded normally, 1 was abandoned early, and 1 (Feb 2026) shows a honeypot signature - buys succeeded while sells reverted for 26 hours before liquidity was pulled. I'd treat anything from this deployer as high-scrutiny.`,
       },
     ],
   },
@@ -45,13 +46,13 @@ The flagged prior launch and the concentrated top holders are the main concerns.
         role: "agent",
         text: `Reputation summary for 0x2ce8…41f7:
 
-Reputation: 78 / 100 — Established
+Reputation: 78 / 100 - Established
 • 12 launches over 14 months, none flagged
 • Median liquidity lock: 180 days
 • Contracts verified on 11 of 12 launches
 • Funding source: aged wallet, no mixer inflows
 
-This profile is consistent with a serial builder rather than a serial rugger. That said, reputation lowers risk — it doesn't remove it. I'd still check the new token's own liquidity and holder spread before sizing in.`,
+This profile is consistent with a serial builder rather than a serial rugger. That said, reputation lowers risk - it doesn't remove it. I'd still check the new token's own liquidity and holder spread before sizing in.`,
       },
     ],
   },
@@ -66,9 +67,9 @@ This profile is consistent with a serial builder rather than a serial rugger. Th
         role: "agent",
         text: `Three tokens stand out in the last 24 hours:
 
-1. HOOD-X — +42%, mentions up 6× — new DEX listing driving volume
-2. SCOPE — +18%, steady accumulation from 3 whale wallets
-3. LMN — −27%, deployer wallet moved 15% of supply to an exchange
+1. HOOD-X - +42%, mentions up 6× - new DEX listing driving volume
+2. SCOPE - +18%, steady accumulation from 3 whale wallets
+3. LMN - −27%, deployer wallet moved 15% of supply to an exchange
 
 The LMN move is the one to watch: supply moving to an exchange from the deployer often precedes selling. Want a sentiment breakdown on any of these?`,
       },
@@ -88,7 +89,7 @@ The LMN move is the one to watch: supply moving to an exchange from the deployer
 • Age: 11 months, 1,204 transactions
 • Realized PnL (90d): +$48,200 across 61 positions
 • Win rate: 64%, median hold time 3.2 days
-• Flags: none — no mixer inflows, no honeypot interactions
+• Flags: none - no mixer inflows, no honeypot interactions
 
 The performance is real but concentrated: 70% of PnL came from 4 early entries. Copy-trading the tail of that strategy won't reproduce those results. I can alert you when this wallet opens a new position instead.`,
       },
@@ -127,7 +128,7 @@ export default function SampleExplorer() {
               {turn.role === "user" ? (
                 "You"
               ) : (
-                <img src="/logo.png" alt="" />
+                <Image src="/logo.png" alt="" width={24} height={24} />
               )}
             </span>
             <div className={styles.turnContent}>

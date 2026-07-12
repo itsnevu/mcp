@@ -2,7 +2,7 @@ import Link from "next/link";
 import { APP_NAME } from "@/lib/chatContract";
 
 export const metadata = {
-  title: `Docs — ${APP_NAME}`,
+  title: `Docs | ${APP_NAME}`,
   description: "Complete setup, API, live backend, and integration guide for HoodScope.",
 };
 
@@ -126,19 +126,7 @@ function Pill({ children }) {
 export default function DocsPage() {
   return (
     <main className="docs-page">
-      <nav className="docs-topbar" aria-label="Documentation navigation">
-        <Link href="/" className="docs-brand">
-          <span className="docs-mark">H</span>
-          <span>{APP_NAME}</span>
-        </Link>
-        <div className="docs-navlinks">
-          <a href="#quickstart">Quickstart</a>
-          <a href="#api">API</a>
-          <a href="#live">Live mode</a>
-          <a href="#pwa">PWA</a>
-          <a href="#frontend">Frontend</a>
-        </div>
-      </nav>
+
 
       <section className="docs-hero">
         <div>

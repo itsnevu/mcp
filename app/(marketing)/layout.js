@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { APP_NAME } from "@/lib/chatContract";
 import CookieConsent from "./CookieConsent";
+import ScrollToTop from "./ScrollToTop";
 import styles from "./marketing.module.css";
 
 export default function MarketingLayout({ children }) {
@@ -10,15 +12,16 @@ export default function MarketingLayout({ children }) {
         <nav className={styles.topbarInner} aria-label="Primary">
           <Link href="/intro" className={styles.brand}>
             <span className={styles.brandMark}>
-              <img src="/logo.png" alt="" />
+              <Image src="/logo.png" alt="" width={24} height={24} />
             </span>
             <span>{APP_NAME}</span>
           </Link>
           <div className={styles.navLinks}>
-            <Link href="/platform">Platform</Link>
+            <Link href="/intro">Intro</Link>
             <Link href="/docs">Docs</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
+            <Link href="/faq">FAQ</Link>
           </div>
           <Link href="/" className={styles.navCta}>
             Try {APP_NAME}
@@ -35,7 +38,7 @@ export default function MarketingLayout({ children }) {
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
             <span className={styles.brandMark}>
-              <img src="/logo.png" alt="" />
+              <Image src="/logo.png" alt="" width={24} height={24} />
             </span>
             <span>{APP_NAME}</span>
           </div>
@@ -62,11 +65,12 @@ export default function MarketingLayout({ children }) {
         </div>
         <div className={styles.footerBottom}>
           <span>© 2026 {APP_NAME}. Built on Robinhood Chain.</span>
-          <span>Research tool — not financial advice.</span>
+          <span>Research tool - not financial advice.</span>
         </div>
       </footer>
 
       <CookieConsent />
+      <ScrollToTop />
     </div>
   );
 }

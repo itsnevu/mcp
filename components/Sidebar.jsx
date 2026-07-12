@@ -3,6 +3,13 @@
 /* Sidebar: brand, New Chat, persistent recents, suggested prompts, socials */
 import Image from "next/image";
 import { APP_NAME } from "@/lib/chatContract";
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "./AuthGate";
+import { useI18n } from "@/lib/I18nContext";
+
+function shortAddr(address) {
+  return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
+}
 
 const stroke = {
   fill: "none",
@@ -149,11 +156,31 @@ export default function Sidebar({
   collapsed,
   onCollapse,
   onNewChat,
+  onIncognitoChat,
   onLoadChat,
   onDeleteChat,
   onSuggest,
   onOpenSettings,
 }) {
+  const auth = useAuth();
+  const { t, activeLang, setActiveLang, languages } = useI18n();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+        setLangMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const LANGUAGES = ["English", "中文 (Chinese)", "Bahasa Indonesia", "Español", "日本語 (Japanese)", "한국어 (Korean)"];
+
   return (
     <aside className={"sidebar" + (collapsed ? " collapsed" : "")}>
       <div className="sidebar-header">
@@ -174,23 +201,30 @@ export default function Sidebar({
         </button>
       </div>
 
-      <button className="new-chat-btn" onClick={onNewChat}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        New Chat
-      </button>
+      <div style={{ display: "flex", gap: 8, padding: "0 12px 16px" }}>
+        <button className="new-chat-btn" onClick={onNewChat} style={{ flex: 1 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t("sidebar.newChat")}
+        </button>
+        <button className="new-chat-btn incognito-btn" onClick={onIncognitoChat} style={{ width: 44, padding: 0, justifyContent: "center", background: "var(--bg-chip)", border: "1px solid var(--border)", color: "var(--text)" }} title="Incognito Chat" aria-label="Incognito Chat">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <use href="#i-ghost" />
+          </svg>
+        </button>
+      </div>
 
       <div className="sidebar-scroll">
-        <div className="section-label">Recent</div>
+        <div className="section-label">{t("sidebar.recent")}</div>
         <div>
           {activeId === null && (
             <div className="side-item recent-item active" role="button" tabIndex={0}>
               <svg viewBox="0 0 24 24">
                 <use href="#i-chat" />
               </svg>
-              <span className="lbl">New Chat</span>
+              <span className="lbl">{t("sidebar.newChat")}</span>
             </div>
           )}
           {chats.map((c) => (
@@ -210,7 +244,10 @@ export default function Sidebar({
               <svg viewBox="0 0 24 24">
                 <use href="#i-chat" />
               </svg>
-              <span className="lbl">{c.title}</span>
+              <span className="lbl" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {c.incognito && <svg viewBox="0 0 24 24" width="14" height="14" style={{ color: "var(--text-3)" }}><use href="#i-ghost" /></svg>}
+                {c.title}
+              </span>
               <button
                 className="del"
                 title="Delete chat"
@@ -230,7 +267,7 @@ export default function Sidebar({
         </div>
 
         <div className="section-label" style={{ paddingTop: 18 }}>
-          Suggested
+          {t("sidebar.suggested")}
         </div>
         {SECTIONS.map((sec) => (
           <div key={sec.label}>
@@ -252,30 +289,100 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div className="sidebar-footer">
-        <button
-          className="social-btn"
-          title="X"
-          aria-label="X"
-          onClick={() => window.open("https://x.com/search?q=Robinhood%20Chain", "_blank", "noopener,noreferrer")}
-        >
-          <svg viewBox="0 0 24 24">
-            <use href="#i-x" />
-          </svg>
+      <div className="sidebar-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 12, position: "relative" }} ref={menuRef}>
+        {menuOpen && (
+          <div className="popover-menu" style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, width: 280 }}>
+            <div style={{ padding: "12px 12px 8px 12px", color: "var(--text-3)", fontSize: 13, wordBreak: "break-all" }}>
+              {auth?.user ? (auth.user.email || auth.user.name || shortAddr(auth.user.address)) : "guest@bugglo.io"}
+            </div>
+            
+            <button className="menu-item" onClick={() => { onOpenSettings(); setMenuOpen(false); }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+                Settings
+              </span>
+              <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>⇧⌘,</span>
+            </button>
+            <div 
+              className="menu-item-wrapper"
+              style={{ position: "relative" }}
+              onMouseEnter={() => setLangMenuOpen(true)} 
+              onMouseLeave={() => setLangMenuOpen(false)}
+            >
+              <button className="menu-item">
+                <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  Language
+                </span>
+                <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>›</span>
+              </button>
+              
+              {langMenuOpen && (
+                <div className="popover-menu submenu" style={{ position: "absolute", top: 0, left: "100%", marginLeft: 8, width: 220 }}>
+                  {LANGUAGES.map(lang => (
+                    <button 
+                      key={lang} 
+                      className="menu-item" 
+                      onClick={() => { setActiveLang(lang); setLangMenuOpen(false); setMenuOpen(false); }}
+                    >
+                      {lang} {activeLang === lang && <svg viewBox="0 0 24 24" {...stroke} style={{color: "var(--accent)", marginLeft: "auto"}}><polyline points="20 6 9 17 4 12"/></svg>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                Get help
+              </span>
+              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
+            </button>
+            <div className="menu-divider" />
+            
+            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                Upgrade plan
+              </span>
+              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
+            </button>
+            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Get apps and extensions
+              </span>
+              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
+            </button>
+            
+            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Learn more
+              </span>
+              <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>›</span>
+            </button>
+
+            <div className="menu-divider" />
+            <button className="menu-item" onClick={auth?.logout} disabled={auth?.busy === "logout"}>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg viewBox="0 0 24 24" {...stroke}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                {auth?.busy === "logout" ? "Logging out..." : "Log out"}
+              </span>
+            </button>
+          </div>
+        )}
+
+        <button className="user-menu-btn" onClick={() => { setMenuOpen(!menuOpen); setLangMenuOpen(false); }}>
+          <div className="user-avatar">{auth?.user?.name?.[0]?.toUpperCase() || auth?.user?.email?.[0]?.toUpperCase() || "N"}</div>
+          <div className="user-menu-info">
+            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+              {auth?.user ? (auth.user.provider === "wallet" ? shortAddr(auth.user.address) : (auth.user.email || auth.user.name)) : "Personal"}
+            </span>
+            <span className="user-menu-plan">Free tier</span>
+          </div>
         </button>
-        <button
-          className="social-btn"
-          title="Telegram"
-          aria-label="Telegram"
-          onClick={() => window.open("https://telegram.org", "_blank", "noopener,noreferrer")}
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M21.94 3.15a1.5 1.5 0 0 0-1.53-.26L2.7 9.83a1.5 1.5 0 0 0 .09 2.82l4.55 1.5 1.74 5.58a1.5 1.5 0 0 0 2.55.57l2.44-2.62 4.44 3.28a1.5 1.5 0 0 0 2.37-.9l3-15.38a1.5 1.5 0 0 0-.94-1.53zM9.5 14.4l8.1-7.23-6.5 8.51-.16 3.34z" />
-          </svg>
-        </button>
-        <div className="kbd-hint">
-          <kbd>⌘K</kbd> focus · <kbd>/</kbd> commands
-        </div>
       </div>
     </aside>
   );

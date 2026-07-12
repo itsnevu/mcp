@@ -4,7 +4,10 @@ import { APP_NAME } from "@/lib/chatContract";
 
 export const metadata = {
   applicationName: APP_NAME,
-  title: `${APP_NAME} — Robinhood Chain intelligence`,
+  title: {
+    template: `%s | ${APP_NAME}`,
+    default: `${APP_NAME} | Robinhood Chain intelligence`,
+  },
   description:
     "AI-assisted Robinhood Chain intelligence for token risk, deployer reputation, wallet analysis, and market moves.",
   manifest: "/manifest.webmanifest",
@@ -29,13 +32,17 @@ export const viewport = {
 // Applies the saved theme before first paint to avoid a light/dark flash.
 const themeScript = `try{var t=localStorage.getItem("hoodscope.theme")||localStorage.getItem("ranger.theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}`;
 
+import { I18nProvider } from "@/lib/I18nContext";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <PwaRegister />
-        {children}
+        <I18nProvider>
+          <PwaRegister />
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );

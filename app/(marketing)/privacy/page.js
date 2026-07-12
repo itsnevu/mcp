@@ -1,7 +1,7 @@
 import { APP_NAME } from "@/lib/chatContract";
 
 export const metadata = {
-  title: `Privacy — ${APP_NAME}`,
+  title: `Privacy | ${APP_NAME}`,
 };
 
 export default function PrivacyPage() {

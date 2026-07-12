@@ -1,4 +1,4 @@
-const CACHE_NAME = "hoodscope-pwa-v1";
+const CACHE_NAME = "hoodscope-pwa-v2";
 const APP_SHELL = [
   "/",
   "/offline",
@@ -11,11 +11,11 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches
       .open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -34,6 +34,7 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin !== self.location.origin || request.method !== "GET") return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/_next/") || url.pathname.includes("hot-update")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

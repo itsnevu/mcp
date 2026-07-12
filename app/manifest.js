@@ -2,7 +2,7 @@ import { APP_NAME } from "@/lib/chatContract";
 
 export default function manifest() {
   return {
-    name: `${APP_NAME} — Robinhood Chain intelligence`,
+    name: `${APP_NAME} | Robinhood Chain intelligence`,
     short_name: APP_NAME,
     description:
       "AI-assisted Robinhood Chain intelligence for token risk, deployer reputation, wallet analysis, and market moves.",
@@ -45,7 +45,7 @@ export default function manifest() {
       {
         name: "Open Chat",
         short_name: "Chat",
-        description: "Open HoodScope chat",
+        description: "Open BUGGLO chat",
         url: "/",
         icons: [{ src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" }],
       },
