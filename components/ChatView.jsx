@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Widget from "./Widgets";
 import { renderRich, fmtTime, replyToText } from "@/lib/text";
@@ -55,7 +56,7 @@ function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scro
   return (
     <div className="msg agent">
       <div className="avatar">
-        <img src="/logo-128.png" alt="" />
+        <Image src="/logo-128.png" alt="" width={34} height={34} />
       </div>
       <div className="bubble">
         {intro ? <div className="txt" dangerouslySetInnerHTML={{ __html: done ? fullHtml : typed }} /> : null}
@@ -108,7 +109,7 @@ export default function ChatView({
       {awaiting && (
         <div className="msg agent">
           <div className="avatar">
-            <img src="/logo-128.png" alt="" />
+            <Image src="/logo-128.png" alt="" width={34} height={34} />
           </div>
           <div className="bubble">
             <span className="typing">

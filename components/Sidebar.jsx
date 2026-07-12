@@ -1,6 +1,8 @@
 "use client";
 
 /* Sidebar: brand, New Chat, persistent recents, suggested prompts, socials */
+import Image from "next/image";
+import { APP_NAME } from "@/lib/chatContract";
 
 const stroke = {
   fill: "none",
@@ -156,9 +158,9 @@ export default function Sidebar({
     <aside className={"sidebar" + (collapsed ? " collapsed" : "")}>
       <div className="sidebar-header">
         <div className="logo-badge">
-          <img src="/logo-128.png" alt="Ranger logo" />
+          <Image src="/logo-128.png" alt={`${APP_NAME} logo`} width={34} height={34} />
         </div>
-        <div className="brand-name">Ranger</div>
+        <div className="brand-name">{APP_NAME}</div>
         <button className="icon-btn" title="Settings" aria-label="Settings" onClick={onOpenSettings}>
           <svg viewBox="0 0 24 24" {...stroke}>
             <circle cx="12" cy="12" r="3" />
@@ -255,7 +257,7 @@ export default function Sidebar({
           className="social-btn"
           title="X"
           aria-label="X"
-          onClick={() => window.open("https://x.com", "_blank")}
+          onClick={() => window.open("https://x.com/search?q=Robinhood%20Chain", "_blank", "noopener,noreferrer")}
         >
           <svg viewBox="0 0 24 24">
             <use href="#i-x" />
@@ -265,7 +267,7 @@ export default function Sidebar({
           className="social-btn"
           title="Telegram"
           aria-label="Telegram"
-          onClick={() => window.open("https://telegram.org", "_blank")}
+          onClick={() => window.open("https://telegram.org", "_blank", "noopener,noreferrer")}
         >
           <svg viewBox="0 0 24 24">
             <path d="M21.94 3.15a1.5 1.5 0 0 0-1.53-.26L2.7 9.83a1.5 1.5 0 0 0 .09 2.82l4.55 1.5 1.74 5.58a1.5 1.5 0 0 0 2.55.57l2.44-2.62 4.44 3.28a1.5 1.5 0 0 0 2.37-.9l3-15.38a1.5 1.5 0 0 0-.94-1.53zM9.5 14.4l8.1-7.23-6.5 8.51-.16 3.34z" />

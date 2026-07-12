@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SvgSprite from "./SvgSprite";
 import Sidebar from "./Sidebar";
@@ -9,8 +10,9 @@ import ChatView from "./ChatView";
 import SettingsModal from "./SettingsModal";
 import { demoAgent } from "@/lib/demoAgent";
 import { replyToText, isValidReply } from "@/lib/text";
+import { APP_NAME, isValidChatResponse } from "@/lib/chatContract";
 
-const LS_STATE = "ranger.state.v1";
+const LS_STATE = "hoodscope.state.v1";
 
 /* Validate persisted shape — valid-JSON-but-wrong-shape must not brick the app. */
 function loadChatsFromStorage() {
@@ -50,7 +52,7 @@ const TRY_CARDS = [
   },
 ];
 
-export default function RangerApp() {
+export default function HoodScopeApp() {
   const [chats, setChats] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [hydrated, setHydrated] = useState(false);
@@ -59,7 +61,7 @@ export default function RangerApp() {
   const [awaiting, setAwaiting] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [statusLive, setStatusLive] = useState(false);
+  const [backendStatus, setBackendStatus] = useState({ kind: "demo", label: "Demo mode" });
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const [mode, setModeState] = useState("Auto");
@@ -87,7 +89,7 @@ export default function RangerApp() {
   useEffect(() => {
     setChats(loadChatsFromStorage());
     try {
-      const m = localStorage.getItem("ranger.mode");
+      const m = localStorage.getItem("hoodscope.mode") || localStorage.getItem("ranger.mode");
       if (m) setModeState(m);
     } catch {}
     setTheme(document.documentElement.getAttribute("data-theme") || "dark");
@@ -118,7 +120,7 @@ export default function RangerApp() {
 
   const backendBase = () => {
     try {
-      return (localStorage.getItem("ranger.backend") || "").replace(/\/+$/, "");
+      return (localStorage.getItem("hoodscope.backend") || localStorage.getItem("ranger.backend") || "").replace(/\/+$/, "");
     } catch {
       return "";
     }
@@ -131,10 +133,15 @@ export default function RangerApp() {
       const res = await fetch(backendBase() + "/api/health", { signal: ctrl.signal });
       clearTimeout(t);
       if (!res.ok) throw new Error();
-      setStatusLive(true);
+      const data = await res.json().catch(() => null);
+      if (data?.mode === "live-ready") {
+        setBackendStatus({ kind: "ready", label: "Live ready" });
+      } else {
+        setBackendStatus({ kind: "demo", label: "Demo mode" });
+      }
       return true;
     } catch {
-      setStatusLive(false);
+      setBackendStatus({ kind: "offline", label: "Backend offline" });
       return false;
     }
   }, []);
@@ -191,7 +198,7 @@ export default function RangerApp() {
   const setMode = useCallback((m) => {
     setModeState(m);
     try {
-      localStorage.setItem("ranger.mode", m);
+      localStorage.setItem("hoodscope.mode", m);
     } catch {}
   }, []);
 
@@ -200,7 +207,7 @@ export default function RangerApp() {
       const next = prev === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
       try {
-        localStorage.setItem("ranger.theme", next);
+        localStorage.setItem("hoodscope.theme", next);
       } catch {}
       return next;
     });
@@ -259,6 +266,7 @@ export default function RangerApp() {
         fetchCtrlRef.current = ctrl;
         const timer = setTimeout(() => ctrl.abort(), 20000); // hung backend can't wedge the UI
         let gotLive = false;
+        let authRequired = false;
         try {
           const res = await fetch(backendBase() + "/api/chat", {
             method: "POST",
@@ -266,12 +274,20 @@ export default function RangerApp() {
             body: JSON.stringify({ message: text, mode, history }),
             signal: ctrl.signal,
           });
+          if (res.status === 401) {
+            authRequired = true;
+            throw new Error("authentication required");
+          }
           if (res.ok) {
             const data = await res.json().catch(() => null);
-            if (data && isValidReply(data.reply)) {
+            if (isValidChatResponse(data)) {
               reply = data.reply;
               gotLive = true;
-              setStatusLive(true);
+              setBackendStatus(data.source === "live" ? { kind: "live", label: "Live data" } : { kind: "demo", label: "Demo mode" });
+            } else if (data && isValidReply(data.reply)) {
+              reply = data.reply;
+              gotLive = true;
+              setBackendStatus({ kind: "demo", label: "Demo mode" });
             }
           }
         } catch {
@@ -284,8 +300,12 @@ export default function RangerApp() {
         if (!gotLive) {
           if (stoppedByUserRef.current) {
             reply = null; // user hit stop while the request was in flight
+          } else if (authRequired) {
+            showToast("Session expired. Please log in again.");
+            setTimeout(() => window.location.reload(), 800);
+            reply = null;
           } else {
-            setStatusLive(false);
+            setBackendStatus({ kind: "offline", label: "Demo fallback" });
             await new Promise((r) => setTimeout(r, 500));
             reply = demoAgent(text);
           }
@@ -314,7 +334,7 @@ export default function RangerApp() {
       // Otherwise busy is released by onTypingDone when the typewriter ends.
       if (!stillCurrent) return;
     },
-    [activeId, mode]
+    [activeId, mode, showToast]
   );
 
   const onSuggest = useCallback(
@@ -332,10 +352,10 @@ export default function RangerApp() {
   const onSaveBackend = useCallback(
     async (url) => {
       try {
-        localStorage.setItem("ranger.backend", url);
+        localStorage.setItem("hoodscope.backend", url);
       } catch {}
       const ok = await checkHealth();
-      showToast(ok ? "Backend connected ✓" : "Backend unreachable — demo mode");
+      showToast(ok ? "Backend reachable" : "Backend unreachable — demo mode");
     },
     [checkHealth, showToast]
   );
@@ -407,9 +427,9 @@ export default function RangerApp() {
 
         <main className="main">
           <TickerTape />
-          <div className={"status-pill " + (statusLive ? "live" : "demo")} title="Backend status">
+          <div className={"status-pill " + backendStatus.kind} title="Backend status">
             <span className="dot" />
-            <span>{statusLive ? "Live" : "Demo mode"}</span>
+            <span>{backendStatus.label}</span>
           </div>
 
           <div className="main-scroll" ref={scrollRef}>
@@ -417,10 +437,10 @@ export default function RangerApp() {
               <div className="home-wrap">
                 <div className="hero">
                   <div className="hero-logo">
-                    <img src="/logo-512.png" alt="Ranger logo" />
+                    <Image src="/logo-512.png" alt={`${APP_NAME} logo`} width={84} height={84} priority />
                   </div>
                   <div className="hero-title-row">
-                    <div className="hero-title">Ranger</div>
+                    <div className="hero-title">{APP_NAME}</div>
                     <div className="beta-pill">BETA</div>
                   </div>
                 </div>
@@ -454,8 +474,9 @@ export default function RangerApp() {
                   onClick={() =>
                     window.open(
                       "https://x.com/intent/tweet?text=" +
-                        encodeURIComponent("@RangerAI_tech what's moving on Robinhood Chain today?"),
-                      "_blank"
+                        encodeURIComponent("What's moving on Robinhood Chain today?"),
+                      "_blank",
+                      "noopener,noreferrer"
                     )
                   }
                 >
@@ -465,8 +486,7 @@ export default function RangerApp() {
                     </svg>
                   </div>
                   <div className="x-banner-text">
-                    <span className="new-tag">NEW</span> · Ask Ranger directly on 𝕏 — one click to tweet{" "}
-                    <span className="handle">@RangerAI_tech</span>
+                    <span className="new-tag">NEW</span> · Share a Robinhood Chain question on 𝕏
                   </div>
                   <div className="x-banner-arrow">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -480,7 +500,7 @@ export default function RangerApp() {
                   <div className="disclaimer">
                     Information provided may be inaccurate or incorrect.
                     <br />
-                    By messaging Ranger, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+                    By messaging {APP_NAME}, you agree to our <a href="/terms">Terms</a>, <a href="/privacy">Privacy Policy</a>, and <a href="/docs">Docs</a>.
                   </div>
                   <button className="theme-toggle" onClick={toggleTheme}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -518,7 +538,7 @@ export default function RangerApp() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        statusLive={statusLive}
+        backendStatus={backendStatus}
         onSaveTest={onSaveBackend}
         onClearChats={clearAllChats}
       />

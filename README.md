@@ -1,8 +1,8 @@
-# 🏇 Ranger — Agentic AI untuk Robinhood Chain (Next.js)
+# HoodScope — Agentic AI untuk Robinhood Chain (Next.js)
 
-Chat UI ala Ranger AI untuk Robinhood Chain — dibangun dengan **Next.js (App Router) + React**,
-bukan sekadar clone: tampilan sama dengan referensi, plus banyak enhancement, dan API route
-yang siap disambungkan ke **Claude API + robinx-mcp**.
+Chat UI untuk Robinhood Chain — dibangun dengan **Next.js (App Router) + React**,
+plus API route yang bisa berjalan sebagai demo lokal atau live mode lewat
+**Claude API + robinx-mcp**.
 
 ## ▶️ Cara menjalankan
 
@@ -13,7 +13,7 @@ npm run dev     # buka http://localhost:3000
 
 Build produksi: `npm run build && npm start`.
 
-## ✨ Enhancement di atas desain aslinya
+## ✨ Enhancement
 
 | Fitur | Keterangan |
 |---|---|
@@ -23,38 +23,41 @@ Build produksi: `npm run build && npm start`.
 | 🛡️ Widget kaya | Rug-check report + gauge risiko, tabel trending + sparkline, sentiment bar, stat tile wallet |
 | 🎙️ Voice input | Web Speech API (Chrome/Safari); tap lagi untuk stop |
 | ⏹️ Stop generation | Tombol berubah jadi stop saat loading/mengetik — juga membatalkan request (AbortController + timeout 20s) |
-| 🔌 Status pill | "Live" kalau `/api/health` merespons, "Demo mode" kalau tidak |
+| 🔌 Status pill | Membedakan `Live data`, `Live ready`, `Demo mode`, dan `Backend offline` |
 | ⚙️ Settings modal | Ganti URL backend eksternal, test koneksi, clear semua chat |
 | 📋 Copy & timestamp | Hover/focus balasan agent → tombol copy; semua pesan ada jam |
 | 🌗 Light/dark theme | Toggle tersimpan, tanpa flash saat reload |
+| 📲 Installable PWA | Manifest, icon 192/512, service worker, dan offline fallback |
 | ⌘K / Esc | Fokus input dari mana saja; Esc menutup menu & modal |
 | 📱 Mobile | Sidebar auto-collapse + backdrop, layout & widget menyesuaikan |
 
-Kode ini juga sudah melewati **review multi-agent** (24 temuan bug diverifikasi lalu
-diperbaiki): race condition pindah-chat saat balasan masih loading, validasi bentuk
-respons backend, guard IME composition, state localStorage yang korup, dan lainnya.
+Kode ini punya hardening untuk race condition pindah-chat saat balasan masih loading,
+validasi bentuk respons backend, guard IME composition, state localStorage yang korup,
+rate limit API, dan fallback demo eksplisit.
 
 ## 🔌 Menyambungkan ke Claude API + robinx-mcp (mode live)
 
-1. Install dependency tambahan:
+1. Buat `.env.local`:
 
    ```bash
-   npm install @anthropic-ai/sdk @modelcontextprotocol/sdk robinx-mcp
+   echo 'AUTH_SECRET=replace-with-long-random-secret' >> .env.local
+   echo 'NEXT_PUBLIC_GOOGLE_CLIENT_ID=...' >> .env.local
+   echo 'GOOGLE_CLIENT_ID=...' >> .env.local
    echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env.local
+   # optional:
+   echo 'ROBINX_WALLET_KEY=0x...' >> .env.local
+   echo 'ROBINX_MAX_USD_PER_CALL=0.10' >> .env.local
    ```
 
-2. Buka [app/api/chat/route.js](app/api/chat/route.js) → ganti pemanggilan `demoAgent()`
-   dengan loop agentic Claude. Contoh lengkapnya sudah ada di komentar atas file itu:
-   - connect ke `robinx-mcp` lewat stdio (MCP client),
-   - daftarkan tools MCP ke Claude (`toolRunner`),
-   - Claude memanggil tools itu untuk data on-chain asli.
+2. Jalankan app. `/api/chat` otomatis memakai Claude + RobinX MCP saat
+   `ANTHROPIC_API_KEY` ada. Kalau live backend gagal, respons tetap fallback ke demo.
 
 3. Kontrak API yang dimengerti UI:
 
    ```
    POST /api/chat  { message, mode, history[] }
-     → { reply: string | { kind: "text"|"rugcheck"|"trending"|"sentiment"|"wallet", ... } }
-   GET  /api/health → { ok: true }
+     → { reply, source: "live"|"demo", backend }
+   GET  /api/health → { ok, service, mode, capabilities }
    ```
 
    Detail bentuk tiap `kind` ada di [lib/demoAgent.js](lib/demoAgent.js). Respons yang
@@ -71,7 +74,7 @@ app/
   api/chat/route.js    ← endpoint chat (demo) + panduan wiring Claude/MCP
   api/health/route.js  ← health check untuk status pill
 components/
-  RangerApp.jsx        ← state utama + orkestrasi send/stop/history
+  HoodScopeApp.jsx     ← state utama + orkestrasi send/stop/history
   Sidebar.jsx          ← recents + suggested prompts
   InputBar.jsx         ← input, mode dropdown, slash commands, mic
   ChatView.jsx         ← pesan + efek typewriter
@@ -86,10 +89,14 @@ lib/
 legacy-static/         ← versi HTML+Node lama (arsip)
 ```
 
+## ✅ Verifikasi
+
+```bash
+npm run verify
+```
+
 ## ⚠️ Catatan penting
 
-- **Branding**: Nama/logo "Ranger" & handle `@RangerAI_tech` milik pihak lain —
-  ini untuk belajar/prototipe lokal. **Ganti nama, logo, dan handle sebelum
-  di-deploy publik** (cari "Ranger" di `components/` dan `app/layout.js`).
-- **Data**: Semua angka masih placeholder (badge `DEMO DATA`). Bukan data pasar
-  asli dan bukan saran finansial.
+- **Live tools berbayar**: beberapa tool RobinX MCP memakai x402/USDC. Tanpa
+  `ROBINX_WALLET_KEY`, tool berbayar dapat mengembalikan price probe, bukan data.
+- **Data demo**: angka dengan badge `DEMO DATA` adalah placeholder dan bukan saran finansial.

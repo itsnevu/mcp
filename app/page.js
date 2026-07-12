@@ -1,5 +1,10 @@
-import RangerApp from "@/components/RangerApp";
+import AuthGate from "@/components/AuthGate";
+import HoodScopeApp from "@/components/HoodScopeApp";
 
 export default function Page() {
-  return <RangerApp />;
+  return (
+    <AuthGate>
+      <HoodScopeApp />
+    </AuthGate>
+  );
 }
