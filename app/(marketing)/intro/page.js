@@ -46,7 +46,7 @@ const methodSteps = [
   {
     number: "02",
     title: "Autonomous Agentic Planning",
-    body: "Once your intent is understood, Claude acts as an autonomous agent. It breaks your request down into a multi-step execution plan. If you ask for a 'deep dive on the deployer of Token X', the agent first plans to resolve the token address, then query the deployer address, and finally scan the deployer's historical transaction graph across the Robinhood Chain. This happens in milliseconds.",
+    body: "Once your intent is understood, the RobinX engine acts as an autonomous agent. It breaks your request down into a multi-step execution plan. If you ask for a 'deep dive on the deployer of Token X', the agent first plans to resolve the token address, then query the deployer address, and finally scan the deployer's historical transaction graph across the Robinhood Chain. This happens in milliseconds.",
   },
   {
     number: "03",
@@ -65,7 +65,7 @@ const limitations = [
     text: `Probabilistic Signals: ${APP_NAME} can produce plausible-sounding but incorrect or incomplete analysis. On-chain signals are inherently probabilistic. A 'clean' rug check report is not a guarantee of safety (as malicious code can be heavily obfuscated), and a flagged report is not absolute proof of fraud. Always conduct your own secondary research.`,
   },
   {
-    text: "Demo Data Mode: When running without an Anthropic API Key or RobinX credentials, the system gracefully degrades to 'Demo Mode'. In this mode, figures carry a DEMO DATA badge and are purely illustrative placeholders—they do not reflect live market data or actual blockchain state.",
+    text: "Demo Data Mode: When running without an engine API key or RobinX MCP credentials, the system gracefully degrades to 'Demo Mode'. In this mode, figures carry a DEMO DATA badge and are purely illustrative placeholders—they do not reflect live market data or actual blockchain state.",
     footnote: 1,
   },
   {
@@ -111,7 +111,7 @@ export default function IntroPage() {
           Introducing <span className={styles.titleAccent}>{APP_NAME}</span>
         </h1>
         <p className={styles.lead}>
-          Stop asking ChatGPT for financial advice. Stop pasting hex codes into vanilla Claude and praying for a hallucination-free answer.{" "}
+          Stop asking general-purpose chatbots for financial advice. Stop pasting hex codes into a model that has never seen the chain and praying for a hallucination-free answer.{" "}
           {APP_NAME} is an agentic AI for {CHAIN_NAME} intelligence — the apex predator of on-chain research. It doesn&apos;t guess: it plans, calls live on-chain tools, and answers with mathematically verified evidence.
         </p>
         <div className={styles.ctaRow}>
@@ -132,10 +132,10 @@ export default function IntroPage() {
           Why standard AI is dead on arrival.
         </h2>
         <p>
-          Let's be brutally honest: asking a generic AI like ChatGPT or Claude to audit a smart contract is a death sentence for your portfolio. They are trained on stale data from years ago. They have zero concept of what happened on the blockchain five minutes ago. They will confidently tell you a rug-pull is a "promising DeFi protocol" because they cannot actually read the live liquidity pools.
+          Let's be brutally honest: asking a general-purpose chatbot to audit a smart contract is a death sentence for your portfolio. They are trained on stale data from years ago. They have zero concept of what happened on the blockchain five minutes ago. They will confidently tell you a rug-pull is a "promising DeFi protocol" because they cannot actually read the live liquidity pools.
         </p>
         <p>
-          We built <strong>{APP_NAME}</strong> to obliterate that limitation. We took a frontier Claude reasoning engine and weaponized it with <strong>RobinX MCP</strong>—giving it direct, unfettered, real-time read access to the Robinhood Chain.
+          We built <strong>{APP_NAME}</strong> to obliterate that limitation. We took a frontier reasoning model — the <strong>RobinX engine</strong> — and weaponized it with <strong>RobinX MCP</strong>—giving it direct, unfettered, real-time read access to the Robinhood Chain.
         </p>
         <p>
           When you ask {APP_NAME} a question, it doesn't search its training weights. It writes a live execution plan, interrogates RPC nodes, scans deployer wallets, and calculates liquidity ratios in milliseconds. It then synthesizes that raw, chaotic blockchain data into beautiful, actionable UI widgets. This is not a chatbot. This is a terminal for on-chain warfare.
@@ -254,7 +254,7 @@ export default function IntroPage() {
           <ol>
             <li id="fn-1">
               Demo mode requires no API keys and marks every figure with a DEMO DATA badge.
-              Live mode activates automatically when an Anthropic API key is configured.{" "}
+              Live mode activates automatically when an engine API key is configured.{" "}
               <a href="#fnref-1" aria-label="Back to reference 1">
                 ↩
               </a>

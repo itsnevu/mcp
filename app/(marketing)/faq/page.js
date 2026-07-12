@@ -38,7 +38,7 @@ const faqSections = [
     items: [
       {
         question: `What exactly is ${APP_NAME}?`,
-        answer: `<p>${APP_NAME} is a conversational, agentic AI terminal specifically designed for the ${CHAIN_NAME} ecosystem. Think of it as a highly specialized financial analyst that lives directly on the blockchain. Instead of manually combing through block explorers, DEX screeners, and contract source codes, you can simply ask ${APP_NAME} a question in plain language.</p><p>The underlying engine utilizes state-of-the-art Large Language Models (like Anthropic's Claude) heavily integrated with the Model Context Protocol (MCP). This allows the AI to autonomously query live on-chain data — such as liquidity pools, token holder distributions, deployer wallet histories, and rug-pull risk factors — and synthesize them into structured, easy-to-read widgets.</p>`,
+        answer: `<p>${APP_NAME} is a conversational, agentic AI terminal specifically designed for the ${CHAIN_NAME} ecosystem. Think of it as a highly specialized financial analyst that lives directly on the blockchain. Instead of manually combing through block explorers, DEX screeners, and contract source codes, you can simply ask ${APP_NAME} a question in plain language.</p><p>The underlying <strong>RobinX engine</strong> utilizes a state-of-the-art frontier reasoning model heavily integrated with the Model Context Protocol (MCP). This allows the AI to autonomously query live on-chain data — such as liquidity pools, token holder distributions, deployer wallet histories, and rug-pull risk factors — and synthesize them into structured, easy-to-read widgets.</p>`,
       },
       {
         question: `What does "agentic AI" actually mean, and why does ${APP_NAME} call itself one?`,
@@ -92,7 +92,7 @@ const faqSections = [
     items: [
       {
         question: 'Why is my data showing as "DEMO DATA"?',
-        answer: `<p>If you see a "DEMO DATA" badge on the UI widgets, it means the application is currently running in Demo Mode. This occurs when the backend server is not configured with live API credentials (like the Anthropic API key for Claude, or the RobinX API keys). In this state, the app will return illustrative, mock data to demonstrate the UI capabilities without incurring live API costs. If you are running the app locally, check the developer documentation to learn how to configure your <code>.env</code> file.</p>`,
+        answer: `<p>If you see a "DEMO DATA" badge on the UI widgets, it means the application is currently running in Demo Mode. This occurs when the backend server is not configured with live API credentials (like the RobinX engine API key, or the RobinX MCP API keys). In this state, the app will return illustrative, mock data to demonstrate the UI capabilities without incurring live API costs. If you are running the app locally, check the developer documentation to learn how to configure your <code>.env</code> file.</p>`,
       },
       {
         question: "How do I change the language or UI theme?",

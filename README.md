@@ -1,7 +1,7 @@
 # Bugglo — Agentic AI for Robinhood Chain (Next.js)
 
 A chat UI for Robinhood Chain — built with **Next.js (App Router) + React**, plus an
-API route that runs either as a local demo or in live mode via **Claude API + robinx-mcp**.
+API route that runs either as a local demo or in live mode via the **RobinX engine + robinx-mcp**.
 
 ## ▶️ Running it
 
@@ -53,7 +53,7 @@ the link where its own grammar wants it).
 Agent prompts (the `q`/`template` fields) deliberately stay in English regardless of
 the UI language — only what the user reads is translated.
 
-## 🔌 Connecting Claude API + robinx-mcp (live mode)
+## 🔌 Connecting the RobinX engine + robinx-mcp (live mode)
 
 1. Create `.env.local`:
 
@@ -61,21 +61,34 @@ the UI language — only what the user reads is translated.
    echo 'AUTH_SECRET=replace-with-long-random-secret' >> .env.local
    echo 'NEXT_PUBLIC_GOOGLE_CLIENT_ID=...' >> .env.local
    echo 'GOOGLE_CLIENT_ID=...' >> .env.local
-   echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env.local
+
+   # the engine — all three are required, there is no default for any of them
+   echo 'ROBINX_ENGINE_KEY=...' >> .env.local
+   echo 'ROBINX_ENGINE_URL=...' >> .env.local     # OpenAI-compatible chat-completions base URL
+   echo 'ROBINX_ENGINE_MODEL=...' >> .env.local   # model id as your provider spells it
+
    # optional:
    echo 'ROBINX_WALLET_KEY=0x...' >> .env.local
    echo 'ROBINX_MAX_USD_PER_CALL=0.10' >> .env.local
    ```
 
-2. Run the app. `/api/chat` automatically uses Claude + RobinX MCP when
-   `ANTHROPIC_API_KEY` is set. If the live backend fails, the response still falls
-   back to demo.
+2. Run the app. `/api/chat` uses the engine + RobinX MCP once all three `ROBINX_ENGINE_*`
+   vars are set; drop any one of them and the route stays on the demo agent. If the live
+   backend errors, the response still falls back to demo.
 
-3. The API contract the UI understands:
+3. **The engine costs money per token, so `/api/chat` is metered.** Requests are capped per
+   minute, per hour and per day, and the day's spend is capped in dollars — per user and
+   globally. Over any cap the route returns `429 { busy: true }` rather than a demo answer,
+   because quietly serving mock numbers to someone asking a real question about their money
+   is worse than serving nothing. The caps and their defaults are documented at the top of
+   [lib/rateLimit.js](lib/rateLimit.js); all of them are env-tunable.
+
+4. The API contract the UI understands:
 
    ```
    POST /api/chat  { message, mode, history[] }
      → { reply, source: "live"|"demo", backend }
+     → 429 { error, busy: true, retryAfterMs }   when over a cap
    GET  /api/health → { ok, service, mode, capabilities }
    ```
 
@@ -90,7 +103,7 @@ app/
   layout.js            ← root layout + theme restore before first paint
   page.js              ← main page
   globals.css          ← all styling (dark/light design tokens)
-  api/chat/route.js    ← chat endpoint (demo) + Claude/MCP wiring
+  api/chat/route.js    ← chat endpoint (demo) + engine/MCP wiring + spend guard
   api/health/route.js  ← health check behind the status pill
 components/
   HoodScopeApp.jsx     ← top-level state + send/stop/history orchestration

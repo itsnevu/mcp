@@ -5,7 +5,7 @@ import { pageMetadata, breadcrumbLd, techArticleLd, faqPageLd } from "@/lib/seo"
 import styles from "../docs.module.css";
 
 const TITLE = "RobinX MCP — the tool layer that lets an AI agent act on Robinhood Chain";
-const DESCRIPTION = `RobinX MCP is the Model Context Protocol server that gives ${APP_NAME} live hands on ${CHAIN_NAME}: token risk, rug verdicts, deployer reputation, launch feeds and leaderboards, called autonomously by Claude inside an agentic loop. This is what it does today, how it is guarded, and how far it goes.`;
+const DESCRIPTION = `RobinX MCP is the Model Context Protocol server that gives ${APP_NAME} live hands on ${CHAIN_NAME}: token risk, rug verdicts, deployer reputation, launch feeds and leaderboards, called autonomously by the RobinX engine inside an agentic loop. This is what it does today, how it is guarded, and how far it goes.`;
 
 export const metadata = pageMetadata({
   /* The head term is "RobinX MCP", but almost nobody cold-searches a brand they have
@@ -27,7 +27,7 @@ export const metadata = pageMetadata({
     "on-chain agent tools",
     `AI agent for ${CHAIN_NAME}`,
     `${CHAIN_NAME} MCP`,
-    "Claude MCP crypto",
+    "Claude Desktop MCP crypto",
     "rug check API",
     "deployer reputation",
     "x402 micropayments",
@@ -78,20 +78,34 @@ const registry = [
 ];
 
 /* Every server in mcp.json, described by what it is FOR rather than by its transport.
-   `disabled: true` entries stay listed on purpose — a reader deciding whether to
-   trust this fleet deserves to see what we deliberately left switched off. */
+   The entries we do NOT load stay listed on purpose. A reader deciding whether to trust this
+   fleet deserves to see what is switched off and what is not answering — a table where every
+   row says "on" is a table nobody should believe.
+
+   `state` is a claim about reality and each one was checked against the live endpoint:
+     on      → connects and lists tools
+     key     → reachable, but answers 401 until its credential is set
+     down    → configured, endpoint is not currently serving. Loaded if it comes back.
+     off     → deliberately disabled in mcp.json */
 const fleet = [
-  { name: "blockscout", role: "Contract source, ABIs, transactions, deployer trail", transport: "HTTP", state: "on" },
   { name: "dexscreener", role: "Price, volume, liquidity, pair-level market data", transport: "stdio", state: "on" },
   { name: "boo-crypto", role: "Rug-check, honeypot behaviour, sanctions screening", transport: "stdio", state: "on" },
-  { name: "whale-intel", role: "Holder analysis, whale tracking, wallet clusters", transport: "HTTP", state: "on" },
-  { name: "boar-basic", role: "General chain intelligence — the cheap first pass", transport: "HTTP", state: "on" },
-  { name: "boar-advanced", role: "Deeper forensics when the first pass finds something", transport: "HTTP", state: "on" },
-  { name: "etherscan", role: "Fallback contract data when Blockscout is down", transport: "stdio", state: "on" },
-  { name: "fuse", role: "Cross-chain context for anything with a bridge in its past", transport: "HTTP", state: "on" },
+  { name: "boar-basic", role: "General chain intelligence — the cheap first pass", transport: "streamable-http", state: "on" },
+  { name: "boar-advanced", role: "Deeper forensics when the first pass finds something", transport: "streamable-http", state: "on" },
+  { name: "fuse", role: "Cross-chain context for anything with a bridge in its past", transport: "streamable-http", state: "on" },
   { name: "hooddomains", role: ".hood name resolution, so wallets have names", transport: "stdio", state: "on" },
+  { name: "etherscan", role: "Contract source and ABIs — needs an Etherscan API key", transport: "stdio", state: "key" },
+  { name: "whale-intel", role: "Holder analysis, whale tracking, wallet clusters", transport: "streamable-http", state: "key" },
+  { name: "blockscout", role: "Contract source, ABIs, transactions, deployer trail", transport: "streamable-http", state: "down" },
   { name: "hoodpocket", role: "Wallet operations — deliberately switched off", transport: "stdio", state: "off" },
 ];
+
+const fleetState = {
+  on: { label: "On", dot: "dotStatusLive", chip: "statusLive" },
+  key: { label: "Needs key", dot: "dotStatusBuilding", chip: "statusBuilding" },
+  down: { label: "Not answering", dot: "dotStatusResearch", chip: "status" },
+  off: { label: "Off", dot: "dotStatusPlanned", chip: "status" },
+};
 
 /* The agent's thinking protocol, verbatim in shape from lib/systemPrompt.js. It is
    printed here because it is the actual product: any model can call one tool, and
@@ -137,7 +151,7 @@ const horizons = [
     era: "Today",
     title: "Read — the chain, cross-examined",
     status: "live",
-    body: "Six RobinX tools and nine external MCP servers, planned across by the model and checked against each other. This ships, right now, in production. Everything below is built on it.",
+    body: "Six RobinX tools and an external MCP fleet, planned across by the model and checked against each other. This ships, right now, in production. Everything below is built on it.",
     proof: "Rug-check, deployer forensics, launch feed, leaderboard, holder spread, honeypot behaviour.",
   },
   {
@@ -201,7 +215,7 @@ const horizons = [
 const faqs = [
   {
     question: "What is RobinX MCP?",
-    answer: `RobinX MCP is a Model Context Protocol server that exposes ${CHAIN_NAME} as a set of tools an AI agent can call directly — token data, rug verdicts, deployer reputation, launch feeds, and leaderboards. ${APP_NAME} connects to it over stdio and lets Claude decide, on its own, which of those tools to call and in what order.`,
+    answer: `RobinX MCP is a Model Context Protocol server that exposes ${CHAIN_NAME} as a set of tools an AI agent can call directly — token data, rug verdicts, deployer reputation, launch feeds, and leaderboards. ${APP_NAME} connects to it over stdio and lets the RobinX engine decide, on its own, which of those tools to call and in what order.`,
   },
   {
     question: "What is the Model Context Protocol?",
@@ -321,7 +335,10 @@ export default function RobinXMcpPage() {
             <div className={styles.modeName}>
               <span aria-hidden="true" className={styles.dotReady} />9 servers
             </div>
-            <small className={styles.modeNote}>External MCP fleet, cross-checking each other.</small>
+            <small className={styles.modeNote}>
+              External MCP fleet, cross-checking each other. Not all are answering — the table
+              below says which.
+            </small>
           </div>
           <div className={styles.mode}>
             <div className={styles.modeName}>
@@ -339,8 +356,8 @@ export default function RobinXMcpPage() {
         </div>
         <p className={styles.lead}>
           The Model Context Protocol is an open standard for handing a model tools. Publish a
-          capability once as an MCP server and any MCP-capable client — Claude, Cursor, your own
-          agent — can call it without a bespoke integration. It is a port, not a plug: the thing you
+          capability once as an MCP server and any MCP-capable client — Claude Desktop, Cursor, your
+          own agent — can call it without a bespoke integration. It is a port, not a plug: the thing you
           build against once instead of rewriting for every model that ships next quarter.
         </p>
         <p className={styles.lead}>
@@ -480,17 +497,13 @@ export default function RobinXMcpPage() {
                   <td>{server.role}</td>
                   <td className={styles.tableDim}>{server.transport}</td>
                   <td>
-                    {server.state === "on" ? (
-                      <span className={styles.statusLive}>
-                        <span aria-hidden="true" className={styles.dotStatusLive} />
-                        On
-                      </span>
-                    ) : (
-                      <span className={styles.status}>
-                        <span aria-hidden="true" className={styles.dotStatusPlanned} />
-                        Off
-                      </span>
-                    )}
+                    <span className={styles[fleetState[server.state].chip]}>
+                      <span
+                        aria-hidden="true"
+                        className={styles[fleetState[server.state].dot]}
+                      />
+                      {fleetState[server.state].label}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -506,7 +519,7 @@ export default function RobinXMcpPage() {
 
         <Code label="mcp.json — adding a server">{`{
   "mcpServers": {
-    "your-server": {
+    "your-stdio-server": {
       "command": "npx",
       "args": ["-y", "your-mcp-server@1.0.0"],
 
@@ -515,6 +528,18 @@ export default function RobinXMcpPage() {
 
       // Optional. Without it, state-changing tools are dropped automatically.
       "allowedTools": ["your_read_tool"]
+    },
+
+    "your-remote-server": {
+      "url": "https://example.com/mcp",
+
+      // "streamable-http" (or "http") | "sse". Omit it and we try streamable
+      // HTTP first, then fall back to SSE.
+      "transport": "streamable-http",
+
+      // Header name -> the ENV VAR holding its value. Never the value itself:
+      // this file is committed, and a token in a committed file is a leaked token.
+      "headersFrom": { "Authorization": "YOUR_SERVER_TOKEN" }
     }
   }
 }`}</Code>
@@ -552,7 +577,7 @@ export default function RobinXMcpPage() {
             <h3>MCP servers get a starved environment</h3>
             <p>
               Servers run as child processes and their output is untrusted. They never receive the
-              process environment — no <code className={styles.inline}>ANTHROPIC_API_KEY</code>, no{" "}
+              process environment — no <code className={styles.inline}>ROBINX_ENGINE_KEY</code>, no{" "}
               <code className={styles.inline}>AUTH_SECRET</code>, no wallet key. Each server is
               handed only the variables it explicitly declared, on top of a minimal safe default.
             </p>
@@ -576,9 +601,13 @@ export default function RobinXMcpPage() {
           </div>
         </div>
 
-        <Code label=".env.local — the whole live-mode surface">{`ANTHROPIC_API_KEY=sk-ant-...          # turns live mode on
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
+        <Code label=".env.local — the whole live-mode surface">{`ROBINX_ENGINE_KEY=...                 # all three turn live mode on together;
+ROBINX_ENGINE_URL=<base URL>          # none has a default, so missing any one
+ROBINX_ENGINE_MODEL=<model id>        # leaves the route on the demo agent
 CHAT_TIMEOUT_MS=25000
+
+ENGINE_USER_USD_PER_DAY=0.25          # the engine bills per token, so /api/chat
+ENGINE_GLOBAL_USD_PER_DAY=5           # is metered — over a cap it returns 429
 
 ROBINX_ALLOWED_TOOLS=robinx_verdict,robinx_token,robinx_deployer
 ROBINX_WALLET_KEY=0x...               # optional — enables paid tools

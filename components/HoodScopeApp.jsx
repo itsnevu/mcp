@@ -307,9 +307,14 @@ export default function HoodScopeApp() {
 
         const ctrl = new AbortController();
         fetchCtrlRef.current = ctrl;
-        const timer = setTimeout(() => ctrl.abort(), 20000); // hung backend can't wedge the UI
+        /* Must outlast the server's own deadline, not undercut it. A live answer is an
+           agentic loop — several model turns with MCP tool calls between them — and a
+           tool-using question routinely runs past 20s. Giving up first threw away a reply
+           the backend was still paying for, and showed demo data instead. */
+        const timer = setTimeout(() => ctrl.abort(), 90000); // hung backend can't wedge the UI
         let gotLive = false;
         let authRequired = false;
+        let serverBusy = false;
         try {
           // Guests have no server session; /api/chat would 401. Answer locally instead.
           if (isGuest) throw new Error("guest");
@@ -322,6 +327,13 @@ export default function HoodScopeApp() {
           if (res.status === 401) {
             authRequired = true;
             throw new Error("authentication required");
+          }
+          /* Over a cap. This must NOT fall through to the demo agent: the user asked a real
+             question about real money, and answering it with placeholder numbers they did
+             not ask for is worse than telling them to come back in a minute. */
+          if (res.status === 429) {
+            serverBusy = true;
+            throw new Error("server busy");
           }
           if (res.ok) {
             const data = await res.json().catch(() => null);
@@ -353,6 +365,9 @@ export default function HoodScopeApp() {
             showToast(t("toast.sessionExpired"));
             setTimeout(() => window.location.reload(), 800);
             reply = null;
+          } else if (serverBusy) {
+            setBackendStatus({ kind: "offline", labelKey: "status.fallback" });
+            reply = { kind: "text", text: t("chat.serverBusy") };
           } else {
             setBackendStatus({ kind: "offline", labelKey: "status.fallback" });
             await new Promise((r) => setTimeout(r, 500));

@@ -14,10 +14,10 @@
     "postcss": "^8.5.17"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "jose": "^6.2.3",
     "next": "^16.2.10",
+    "openai": "^6.46.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "robinx-mcp": "^0.2.0",

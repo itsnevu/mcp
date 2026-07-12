@@ -20,7 +20,10 @@
       "url": "https://mcp.fuse.io/mcp"
     },
     "whale-intel": {
-      "url": "https://mcp.swisswhaleintelligence.com/mcp"
+      "url": "https://mcp.swisswhaleintelligence.com/mcp",
+      "headersFrom": {
+        "Authorization": "WHALE_INTEL_KEY"
+      }
     },
     "etherscan": {
       "command": "npx",

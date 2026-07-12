@@ -85,7 +85,7 @@ function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scro
 const MODELS = [
   { id: "Bugglo V1", descKey: "model.buggloV1.desc" },
   { id: "Bugglo Pro", descKey: "model.buggloPro.desc" },
-  { id: "Claude Opus 4.8", descKey: "model.sonnet.desc" },
+  { id: "RobinX", descKey: "model.robinx.desc" },
   { id: "Fable", descKey: "model.fable.desc" },
   { id: "GPT-4o", descKey: "model.gpt4o.desc" },
 ];

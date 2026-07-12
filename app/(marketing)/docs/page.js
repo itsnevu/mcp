@@ -5,7 +5,7 @@ import { pageMetadata, breadcrumbLd, techArticleLd } from "@/lib/seo";
 import styles from "./docs.module.css";
 
 const TITLE = `${APP_NAME} API and integration guide`;
-const DESCRIPTION = `Setup, the HTTP API, live Claude + RobinX MCP mode, the on-chain agent surface, and the widget contract — everything needed to point your own frontend at ${APP_NAME}.`;
+const DESCRIPTION = `Setup, the HTTP API, live RobinX engine + RobinX MCP mode, the on-chain agent surface, and the widget contract — everything needed to point your own frontend at ${APP_NAME}.`;
 
 export const metadata = pageMetadata({
   /* Renders as "Docs — API and integration guide | Bugglo". A bare "Docs" would
@@ -41,7 +41,7 @@ const endpoints = [
   "service": "hoodscope-backend",
   "mode": "demo",
   "capabilities": {
-    "anthropic": false,
+    "engine": false,
     "mcp": false,
     "paidToolsEnabled": false
   }
@@ -155,6 +155,11 @@ const replyKinds = [
  *   planned  → designed, not started
  *   research → needs on-chain primitives that do not exist yet
  *
+ * The `robinx_*` tools marked live are the ones the model is actually handed, so they must
+ * mirror DEFAULT_ALLOWED_TOOLS in lib/liveAgent.js exactly. This list once advertised a
+ * "robinx_launches" that no server has ever exposed — a docs page inventing a tool is the
+ * one bug here nobody can catch by reading the docs page.
+ *
  * Keep this in step with the capability ladder on /intro.
  */
 const toolGroups = [
@@ -176,14 +181,24 @@ const toolGroups = [
         desc: "Composite rug-check: contract source, honeypot behaviour, LP lock, ownership powers.",
       },
       {
+        name: "robinx_deployer",
+        status: "live",
+        desc: "The address that shipped the contract, and the thread back to everything else it has ever touched.",
+      },
+      {
         name: "robinx_stats",
         status: "live",
         desc: "Deployer reputation and the full history of every contract an address has ever shipped.",
       },
       {
-        name: "robinx_launches",
+        name: "robinx_feed",
         status: "live",
         desc: "The live launch feed — what deployed in the last hour, with liquidity attached to it.",
+      },
+      {
+        name: "robinx_leaderboard",
+        status: "live",
+        desc: "Ranked movement across the chain, with volume shown next to the liquidity backing it.",
       },
       {
         name: "chain_holder_graph",
@@ -354,7 +369,7 @@ export default function DocsPage() {
         <div className={styles.kicker}>Developer documentation</div>
         <h1 className={styles.heroTitle}>{TITLE}</h1>
         <p className={styles.heroLead}>
-          How to run the app, call the chat API, turn on the live Claude and RobinX MCP backend,
+          How to run the app, call the chat API, turn on the live RobinX engine and RobinX MCP backend,
           read the widget contract, and point your own frontend at it. It also lays out the tool
           surface we are building toward: an agent that does not just read Robinhood Chain, but
           deploys, analyses, and trades on it.
@@ -373,14 +388,14 @@ export default function DocsPage() {
               <span aria-hidden="true" className={styles.dotReady} />
               Live ready
             </div>
-            <small className={styles.modeNote}>ANTHROPIC_API_KEY is present.</small>
+            <small className={styles.modeNote}>ROBINX_ENGINE_KEY is present.</small>
           </div>
           <div className={styles.mode}>
             <div className={styles.modeName}>
               <span aria-hidden="true" className={styles.dotLive} />
               Live data
             </div>
-            <small className={styles.modeNote}>Claude is calling RobinX MCP tools.</small>
+            <small className={styles.modeNote}>The RobinX engine is calling RobinX MCP tools.</small>
           </div>
         </div>
       </header>
@@ -391,7 +406,7 @@ export default function DocsPage() {
           <h2 className={styles.sectionTitle}>What you are integrating with</h2>
         </div>
         <p className={styles.lead}>
-          {APP_NAME} is an agentic loop, not a search box. A request is planned by Claude,
+          {APP_NAME} is an agentic loop, not a search box. A request is planned by the RobinX engine,
           executed against on-chain tools, and returned as a typed reply the interface knows how
           to render. Without credentials the same endpoints keep working in demo mode, so you can
           build the whole frontend before you ever pay for a token.
@@ -411,7 +426,7 @@ export default function DocsPage() {
           <div className={styles.card}>
             <h3>Two backends, one contract</h3>
             <p>
-              The demo agent and the live Claude agent return the same reply shape. If the live
+              The demo agent and the live RobinX agent return the same reply shape. If the live
               agent fails, times out, or returns an invalid shape, the response falls back to demo
               rather than breaking the UI — so a missing key degrades the answer, never the app.
             </p>
@@ -459,10 +474,21 @@ npm start`}</Code>
         <Code label=".env.local">{`AUTH_SECRET=replace-with-long-random-secret
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_ID=...
-ANTHROPIC_API_KEY=sk-ant-...
+
+# live mode — all three required, none of them has a default.
+# Miss any one and the route stays on the demo agent.
+ROBINX_ENGINE_KEY=...
+ROBINX_ENGINE_URL=<OpenAI-compatible chat-completions base URL>
+ROBINX_ENGINE_MODEL=<model id from your provider>
+
+# optional — spend caps. Over any of them /api/chat returns 429 "Server busy".
+ENGINE_MAX_PER_MINUTE=5
+ENGINE_MAX_PER_DAY=150
+ENGINE_USER_USD_PER_DAY=0.25
+ENGINE_GLOBAL_USD_PER_DAY=5
+ENGINE_TRUSTED_PROXIES=1
 
 # optional
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
 CHAT_TIMEOUT_MS=25000
 ROBINX_URL=https://api.robinx.io
 ROBINX_WALLET_KEY=0x...
@@ -588,11 +614,11 @@ console.log(data.source, data.reply);`}</Code>
       <section className={styles.section} id="live">
         <div className={styles.sectionHead}>
           <div className={styles.eyebrow}>The agent</div>
-          <h2 className={styles.sectionTitle}>Live mode: Claude + RobinX MCP</h2>
+          <h2 className={styles.sectionTitle}>Live mode: RobinX engine + RobinX MCP</h2>
           <p className={styles.lead}>
             Live mode activates on its own the moment{" "}
-            <code className={styles.inline}>ANTHROPIC_API_KEY</code> is set. Claude plans the route,
-            calls RobinX MCP tools, and returns a typed reply. Some tools are paid through x402 in
+            <code className={styles.inline}>ROBINX_ENGINE_KEY</code> is set. The engine plans the
+            route, calls RobinX MCP tools, and returns a typed reply. Some tools are paid through x402 in
             USDC, which is why the wallet key and the per-call ceiling exist.
           </p>
           <p className={styles.lead}>
@@ -700,7 +726,7 @@ console.log(data.source, data.reply);`}</Code>
     "requiresSignature": true
   },
   "source": "live",
-  "backend": "claude+robinx"
+  "backend": "robinx-engine+robinx-mcp"
 }`}</Code>
       </section>
 
@@ -830,7 +856,7 @@ console.log(data.source, data.reply);`}</Code>
             <p>
               Never send a private key or seed phrase through chat — no {APP_NAME} feature will ever
               ask for one, and any prompt that does is an attack. Keep{" "}
-              <code className={styles.inline}>ANTHROPIC_API_KEY</code> and{" "}
+              <code className={styles.inline}>ROBINX_ENGINE_KEY</code> and{" "}
               <code className={styles.inline}>AUTH_SECRET</code> in the server environment only.
               Wallet login asks for a message signature and nothing else. If you enable x402 paid
               tools, fund a dedicated low-balance wallet — never your main one.

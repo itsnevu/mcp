@@ -8,6 +8,6 @@ export default function Image() {
   return ogImage({
     eyebrow: "Developers",
     title: "Documentation",
-    subtitle: "Setup, the HTTP API, live Claude + RobinX MCP mode, and the on-chain agent surface.",
+    subtitle: "Setup, the HTTP API, live RobinX engine + RobinX MCP mode, and the on-chain agent surface.",
   });
 }
