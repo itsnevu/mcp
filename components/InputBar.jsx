@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { COMMANDS } from "@/lib/commands";
 import { useI18n } from "@/lib/I18nContext";
 
+/* `name` is the wire value sent to /api/chat (see MODES in lib/chatContract.js)
+   and must not be translated; labelKey/descKey are what the user reads. */
 const MODES = [
-  { name: "Auto", desc: "Best for most questions", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg> },
-  { name: "Fast", desc: "Quick, lighter answers", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg> },
-  { name: "Deep", desc: "Slower, more thorough", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg> },
+  { name: "Auto", labelKey: "mode.auto.label", descKey: "mode.auto.desc", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg> },
+  { name: "Fast", labelKey: "mode.fast.label", descKey: "mode.fast.desc", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg> },
+  { name: "Deep", labelKey: "mode.deep.label", descKey: "mode.deep.desc", svg: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg> },
 ];
 
 export default function InputBar({
@@ -107,7 +109,7 @@ export default function InputBar({
     const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
     if (!SR) {
       inputRef.current?.focus();
-      showToast("Voice input not supported in this browser");
+      showToast(t("toast.voiceUnsupported"));
       return;
     }
     const rec = new SR();
@@ -139,7 +141,7 @@ export default function InputBar({
               onClick={() => pickCommand(c)}
             >
               <span className="cmd-name">{c.cmd}</span>
-              <span className="cmd-desc">{c.desc}</span>
+              <span className="cmd-desc">{t(c.descKey)}</span>
             </button>
           ))}
         </div>
@@ -148,8 +150,8 @@ export default function InputBar({
       <div className="input-bar">
         <div className="mode-wrap">
           <button className="mode-btn" onClick={() => setModeOpen((o) => !o)}>
-            {MODES.find(m => m.name === mode)?.svg || MODES[0].svg}
-            <span>{mode}</span>
+            {(MODES.find((m) => m.name === mode) || MODES[0]).svg}
+            <span>{t((MODES.find((m) => m.name === mode) || MODES[0]).labelKey)}</span>
           </button>
           {modeOpen && (
             <div className="mode-menu open">
@@ -165,8 +167,8 @@ export default function InputBar({
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {m.svg}
                     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                      {m.name}
-                      <small>{m.desc}</small>
+                      {t(m.labelKey)}
+                      <small>{t(m.descKey)}</small>
                     </span>
                   </span>
                   <span className="check" style={{ visibility: mode === m.name ? "visible" : "hidden" }}>
@@ -192,7 +194,7 @@ export default function InputBar({
           spellCheck={false}
         />
 
-        <button className={micClass} onClick={micClick} title="Voice input / send" aria-label="Voice input or send">
+        <button className={micClass} onClick={micClick} title={t("input.micTitle")} aria-label={t("input.micAria")}>
           {busy ? (
             <svg viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="6" width="12" height="12" rx="2" />

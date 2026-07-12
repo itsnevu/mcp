@@ -1,116 +1,151 @@
-import { APP_NAME } from "@/lib/chatContract";
+import { APP_NAME, CHAIN_NAME } from "@/lib/chatContract";
+import JsonLd from "@/components/JsonLd";
+import { pageMetadata, breadcrumbLd, faqPageLd, webPageLd } from "@/lib/seo";
 
-export const metadata = {
-  title: `FAQ | ${APP_NAME}`,
-};
+const TITLE = "Frequently Asked Questions";
+const DESCRIPTION = `Answers about ${APP_NAME}: what it is, where its on-chain data comes from, how Incognito Mode and wallet login protect you, how accurate the analysis is, and what to do when you see DEMO DATA.`;
+
+export const metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/faq",
+  keywords: [
+    `${APP_NAME} FAQ`,
+    "what is agentic AI",
+    "agentic AI",
+    "agentic AI crypto",
+    "AI agent",
+    "incognito mode",
+    "wallet login safety",
+    "demo data",
+    "slash commands",
+    "rug check accuracy",
+    `${CHAIN_NAME} AI`,
+  ],
+});
+
+/* Both the page and its FAQPage structured data are generated from this one array.
+   Google only awards the FAQ rich result when the marked-up answer is the answer a
+   visitor actually sees, so a second hand-kept copy for the crawler is not a
+   shortcut — it is the exact thing that gets the rich result revoked when it drifts.
+
+   Answers are HTML because Google's FAQPage answer field accepts a small tag
+   whitelist and rendering it verbatim is what keeps the two in step. */
+const faqSections = [
+  {
+    id: "general",
+    heading: "1. General Overview",
+    items: [
+      {
+        question: `What exactly is ${APP_NAME}?`,
+        answer: `<p>${APP_NAME} is a conversational, agentic AI terminal specifically designed for the ${CHAIN_NAME} ecosystem. Think of it as a highly specialized financial analyst that lives directly on the blockchain. Instead of manually combing through block explorers, DEX screeners, and contract source codes, you can simply ask ${APP_NAME} a question in plain language.</p><p>The underlying engine utilizes state-of-the-art Large Language Models (like Anthropic's Claude) heavily integrated with the Model Context Protocol (MCP). This allows the AI to autonomously query live on-chain data — such as liquidity pools, token holder distributions, deployer wallet histories, and rug-pull risk factors — and synthesize them into structured, easy-to-read widgets.</p>`,
+      },
+      {
+        question: `What does "agentic AI" actually mean, and why does ${APP_NAME} call itself one?`,
+        answer: `<p>A conventional chatbot answers from what it memorised during training. An <strong>agentic AI</strong> does something different: given a goal, it plans the steps, decides which tools it needs, calls them, reads the results, and keeps going until it can answer. The "agentic" part is the autonomy — you state an outcome, not a procedure.</p><p>${APP_NAME} is agentic in exactly that sense. Ask it "is this token safe?" and the agent decides on its own to resolve the contract address, pull the holder distribution, fetch the deployer's history, and check the liquidity — then reasons over what came back. It is not retrieving a pre-written answer, and it is not guessing from training data: every step is a live tool call against ${CHAIN_NAME}, and the evidence is shown to you alongside the conclusion.</p>`,
+      },
+      {
+        question: "Who is this platform built for?",
+        answer: `<p>${APP_NAME} is built for traders, researchers, auditors, and everyday crypto enthusiasts who need fast, actionable, and evidence-based intelligence on the ${CHAIN_NAME}. Whether you are trying to verify if a newly launched meme token is a honeypot, tracking the portfolio of a specific whale wallet, or gauging the overall market sentiment, ${APP_NAME} dramatically reduces your research time.</p>`,
+      },
+      {
+        question: "Do I need an account to use the app?",
+        answer: `<p>You do not strictly need an account. We offer a <strong>Guest Mode</strong> ("Continue without account") that allows you to explore the application and interact with the AI immediately.</p><p>However, we highly recommend connecting via Google or your Web3 Wallet (like MetaMask). Authenticated users gain access to persistent chat histories across devices, customized AI system instructions, and higher rate limits for complex on-chain queries.</p>`,
+      },
+    ],
+  },
+  {
+    id: "privacy",
+    heading: "2. Privacy & Data Handling",
+    items: [
+      {
+        question: "What is Incognito Mode and how does it work?",
+        answer: `<p>Incognito Mode is a privacy-first feature designed for users who want to research sensitive tokens or wallets without leaving a trace. When you toggle Incognito Mode (via the ghost icon in the sidebar), the application enforces strict ephemeral data handling:</p><ul><li><strong>No Local Storage:</strong> Chats are kept in active memory and never written to your browser's IndexedDB or LocalStorage.</li><li><strong>No Server Logs:</strong> The backend API strips logging mechanisms for these specific session requests.</li><li><strong>No AI Training:</strong> Your prompts and the associated responses are explicitly flagged via API headers to opt out of any third-party model training pipelines.</li></ul><p>The moment you refresh the page or close the tab, the entire conversation evaporates permanently.</p>`,
+      },
+      {
+        question: "Are my wallet credentials safe?",
+        answer: `<p>Absolutely. When you authenticate using a Web3 wallet, ${APP_NAME} utilizes the EIP-1193 standard. We only ask you to cryptographically sign a simple text message to prove ownership of the address. We <strong>never</strong> ask for your private keys, seed phrases, or transaction approval permissions during the login process.</p>`,
+      },
+    ],
+  },
+  {
+    id: "capabilities",
+    heading: "3. Technical Capabilities & Accuracy",
+    items: [
+      {
+        question: `Where does ${APP_NAME} get its data?`,
+        answer: `<p>The AI does not rely on static training data for its financial analysis. Instead, it utilizes the <strong>RobinX Model Context Protocol (MCP)</strong>. This protocol provides the AI agent with a suite of highly-optimized, real-time RPC tools. When you ask a question, the AI writes a plan, executes live queries against ${CHAIN_NAME} nodes and indexers, and then parses the raw blockchain data to formulate your answer.</p>`,
+      },
+      {
+        question: "Is the AI's financial analysis guaranteed to be accurate?",
+        answer: `<p><strong>No.</strong> While ${APP_NAME} is a powerful intelligence tool, it is not infallible. On-chain signals are inherently probabilistic. For example, a token contract might pass all standard "rug check" heuristics (like burned liquidity and renounced ownership), but the developer could still dump a massive un-tracked token supply held in a secondary wallet.</p><p>Conversely, a flagged contract is not definitively fraudulent — it may just employ unconventional tokenomics. You must always use ${APP_NAME} as a starting point for your research, not as definitive financial advice.</p>`,
+      },
+      {
+        question: "What are Slash Commands?",
+        answer: `<p>Slash commands are shortcuts designed for power users to bypass the AI's natural language parsing and directly trigger specific on-chain tools. Currently supported commands include <code>/market</code> (for broader macroeconomic trends on the chain), <code>/wallet [address]</code> (to immediately pull the holdings and transaction history of a specific address), and <code>/contract [address]</code> (to force a deep-dive security audit of a smart contract).</p>`,
+      },
+    ],
+  },
+  {
+    id: "troubleshooting",
+    heading: "4. Troubleshooting & Settings",
+    items: [
+      {
+        question: 'Why is my data showing as "DEMO DATA"?',
+        answer: `<p>If you see a "DEMO DATA" badge on the UI widgets, it means the application is currently running in Demo Mode. This occurs when the backend server is not configured with live API credentials (like the Anthropic API key for Claude, or the RobinX API keys). In this state, the app will return illustrative, mock data to demonstrate the UI capabilities without incurring live API costs. If you are running the app locally, check the developer documentation to learn how to configure your <code>.env</code> file.</p>`,
+      },
+      {
+        question: "How do I change the language or UI theme?",
+        answer: `<p>Open Settings from the gear icon in the sidebar header, or from the user menu at the bottom (⇧⌘,). Under General you can switch the visual theme (Dark/Light) and pick your interface language — English, 中文, Español, 日本語, or 한국어. Language can also be changed straight from the user menu. The entire interface updates instantly.</p>`,
+      },
+    ],
+  },
+];
+
+/* Google's FAQPage answer accepts only a small tag whitelist, and <code> is not on
+   it. The reader keeps the monospace styling; the structured data gets <strong>. */
+function toStructuredAnswer(html) {
+  return html.replace(/<(\/?)code>/g, "<$1strong>");
+}
+
+const structuredItems = faqSections.flatMap((section) =>
+  section.items.map((item) => ({
+    question: item.question,
+    answer: toStructuredAnswer(item.answer),
+  })),
+);
 
 export default function FaqPage() {
   return (
     <main className="legal-page">
-      <h1>Frequently Asked Questions</h1>
-      
-      <section className="faq-section" style={{ marginTop: "40px" }}>
-        <h2 style={{ fontSize: "24px", marginBottom: "24px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>1. General Overview</h2>
+      <JsonLd
+        data={[
+          faqPageLd(structuredItems, "/faq"),
+          webPageLd({ title: TITLE, description: DESCRIPTION, path: "/faq" }),
+          breadcrumbLd([
+            { name: APP_NAME, path: "/" },
+            { name: "FAQ", path: "/faq" },
+          ]),
+        ]}
+      />
 
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>What exactly is {APP_NAME}?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6", marginBottom: "12px" }}>
-            {APP_NAME} is a conversational, agentic AI terminal specifically designed for the Robinhood Chain ecosystem. Think of it as a highly specialized financial analyst that lives directly on the blockchain. Instead of manually combing through block explorers, DEX screeners, and contract source codes, you can simply ask {APP_NAME} a question in plain English or Indonesian.
-          </p>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            The underlying engine utilizes state-of-the-art Large Language Models (like Anthropic's Claude 3.5 Sonnet) heavily integrated with the Model Context Protocol (MCP). This allows the AI to autonomously query live on-chain data—such as liquidity pools, token holder distributions, deployer wallet histories, and rug-pull risk factors—and synthesize them into structured, easy-to-read widgets.
-          </p>
-        </div>
+      <h1>{TITLE}</h1>
 
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Who is this platform built for?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            {APP_NAME} is built for traders, researchers, auditors, and everyday crypto enthusiasts who need fast, actionable, and evidence-based intelligence on the Robinhood Chain. Whether you are trying to verify if a newly launched meme token is a honeypot, tracking the portfolio of a specific whale wallet, or gauging the overall market sentiment, {APP_NAME} dramatically reduces your research time.
-          </p>
-        </div>
+      {faqSections.map((section) => (
+        <section key={section.id} id={section.id} className="faq-section">
+          <h2>{section.heading}</h2>
 
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Do I need an account to use the app?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6", marginBottom: "12px" }}>
-            You do not strictly need an account. We offer a <strong>Guest Mode</strong> ("Continue without account") that allows you to explore the application and interact with the AI immediately.
-          </p>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            However, we highly recommend connecting via Google or your Web3 Wallet (like MetaMask). Authenticated users gain access to persistent chat histories across devices, customized AI system instructions, and higher rate limits for complex on-chain queries.
-          </p>
-        </div>
-      </section>
-
-      <section className="faq-section" style={{ marginTop: "40px" }}>
-        <h2 style={{ fontSize: "24px", marginBottom: "24px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>2. Privacy & Data Handling</h2>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>What is Incognito Mode and how does it work?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6", marginBottom: "12px" }}>
-            Incognito Mode is a privacy-first feature designed for users who want to research sensitive tokens or wallets without leaving a trace. When you toggle Incognito Mode (via the ghost icon in the sidebar), the application enforces strict ephemeral data handling:
-          </p>
-          <ul style={{ color: "var(--text-2)", lineHeight: "1.6", paddingLeft: "20px", marginBottom: "12px" }}>
-            <li><strong>No Local Storage:</strong> Chats are kept in active memory and never written to your browser's IndexedDB or LocalStorage.</li>
-            <li><strong>No Server Logs:</strong> The backend API strips logging mechanisms for these specific session requests.</li>
-            <li><strong>No AI Training:</strong> Your prompts and the associated responses are explicitly flagged via API headers to opt-out of any third-party model training pipelines.</li>
-          </ul>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            The moment you refresh the page or close the tab, the entire conversation evaporates permanently.
-          </p>
-        </div>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Are my wallet credentials safe?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            Absolutely. When you authenticate using a Web3 wallet, {APP_NAME} utilizes the EIP-1193 standard. We only ask you to cryptographically sign a simple text message to prove ownership of the address. We <strong>never</strong> ask for your private keys, seed phrases, or transaction approval permissions during the login process.
-          </p>
-        </div>
-      </section>
-
-      <section className="faq-section" style={{ marginTop: "40px" }}>
-        <h2 style={{ fontSize: "24px", marginBottom: "24px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>3. Technical Capabilities & Accuracy</h2>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Where does {APP_NAME} get its data?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            The AI does not rely on static training data for its financial analysis. Instead, it utilizes the <strong>RobinX Model Context Protocol (MCP)</strong>. This protocol provides the AI agent with a suite of highly-optimized, real-time RPC tools. When you ask a question, the AI writes a plan, executes live queries against Robinhood Chain nodes and indexers, and then parses the raw blockchain data to formulate your answer.
-          </p>
-        </div>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Is the AI's financial analysis guaranteed to be accurate?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6", marginBottom: "12px" }}>
-            <strong>No.</strong> While {APP_NAME} is a powerful intelligence tool, it is not infallible. On-chain signals are inherently probabilistic. For example, a token contract might pass all standard "rug check" heuristics (like burned liquidity and renounced ownership), but the developer could still dump a massive un-tracked token supply held in a secondary wallet.
-          </p>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            Conversely, a flagged contract is not definitively fraudulent—it may just employ unconventional tokenomics. You must always use {APP_NAME} as a starting point for your research, not as definitive financial advice.
-          </p>
-        </div>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>What are Slash Commands?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            Slash commands are shortcuts designed for power users to bypass the AI's natural language parsing and directly trigger specific on-chain tools. Currently supported commands include <code>/market</code> (for broader macroeconomic trends on the chain), <code>/wallet [address]</code> (to immediately pull the holdings and transaction history of a specific address), and <code>/contract [address]</code> (to force a deep-dive security audit of a smart contract).
-          </p>
-        </div>
-      </section>
-
-      <section className="faq-section" style={{ marginTop: "40px" }}>
-        <h2 style={{ fontSize: "24px", marginBottom: "24px", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>4. Troubleshooting & Settings</h2>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>Why is my data showing as "DEMO DATA"?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            If you see a "DEMO DATA" badge on the UI widgets, it means the application is currently running in Demo Mode. This occurs when the backend server is not configured with live API credentials (like the Anthropic API Key for Claude or the RobinX API keys). In this state, the app will return illustrative, mock data to demonstrate the UI capabilities without incurring live API costs. If you are running the app locally, check the developer documentation to learn how to configure your <code>.env</code> file.
-          </p>
-        </div>
-
-        <div className="faq-item" style={{ marginBottom: "32px" }}>
-          <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "var(--accent)" }}>How do I change the language or UI theme?</h3>
-          <p style={{ color: "var(--text-2)", lineHeight: "1.6" }}>
-            Click the gear icon located at the bottom of the sidebar to open the Global Settings Modal. From there, you can toggle the visual theme (Dark/Light mode) and select your preferred language (English or Bahasa Indonesia). The entire application, including dynamic text placeholders and AI system prompts, will adjust instantly to your selection.
-          </p>
-        </div>
-      </section>
+          {section.items.map((item) => (
+            <div key={item.question} className="faq-item">
+              <h3>{item.question}</h3>
+              <div
+                className="faq-answer"
+                dangerouslySetInnerHTML={{ __html: item.answer }}
+              />
+            </div>
+          ))}
+        </section>
+      ))}
     </main>
   );
 }

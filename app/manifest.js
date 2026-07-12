@@ -1,11 +1,13 @@
 import { APP_NAME } from "@/lib/chatContract";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
 export default function manifest() {
   return {
-    name: `${APP_NAME} | Robinhood Chain intelligence`,
+    /* Sourced from the same constants as the page metadata: the install prompt and
+       the search result should not be able to describe the app differently. */
+    name: SITE_TITLE,
     short_name: APP_NAME,
-    description:
-      "AI-assisted Robinhood Chain intelligence for token risk, deployer reputation, wallet analysis, and market moves.",
+    description: SITE_DESCRIPTION,
     id: "/",
     start_url: "/",
     scope: "/",

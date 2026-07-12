@@ -43,7 +43,7 @@ export default function AuthGate({ children }) {
   const [busy, setBusy] = useState("");
   const googleRef = useRef(null);
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const { t } = useI18n();
+  const { t, tRich, activeLang } = useI18n();
 
   const refreshSession = useCallback(async () => {
     const [res] = await Promise.all([
@@ -59,8 +59,12 @@ export default function AuthGate({ children }) {
     refreshSession();
   }, [refreshSession]);
 
+  /* Re-runs on `guest` too: leaving guest mode (the prompt limit kicks the visitor
+     back here) unmounts the gate and remounts it with a *fresh*, empty div for the
+     button. Without `guest` in the deps nothing re-renders into that new node, and
+     the sign-in screen comes back with the Google button silently missing. */
   useEffect(() => {
-    if (loading || user || !googleClientId || !googleRef.current) return;
+    if (loading || user || guest || !googleClientId || !googleRef.current) return;
     let cancelled = false;
     loadGoogleScript()
       .then(() => {
@@ -77,7 +81,7 @@ export default function AuthGate({ children }) {
                 body: JSON.stringify({ credential }),
               });
               const data = await res.json().catch(() => null);
-              if (!res.ok) throw new Error(data?.error || "Google login failed");
+              if (!res.ok) throw new Error(data?.error || t("auth.error.google"));
               setUser(data.user);
             } catch (err) {
               setError(err.message);
@@ -91,14 +95,15 @@ export default function AuthGate({ children }) {
           size: "large",
           shape: "rectangular",
           text: "continue_with",
+          locale: activeLang,
           width: 316,
         });
       })
-      .catch(() => setError("Google login script failed to load"));
+      .catch(() => setError(t("auth.error.googleScript")));
     return () => {
       cancelled = true;
     };
-  }, [googleClientId, loading, user]);
+  }, [googleClientId, loading, user, guest, activeLang, t]);
 
   const loginWallet = async () => {
     setBusy("wallet");
@@ -106,12 +111,12 @@ export default function AuthGate({ children }) {
     try {
       const provider = window.ethereum;
       if (!provider?.request) {
-        throw new Error("MetaMask, Phantom, or EVM-compatible browser wallet was not found");
+        throw new Error(t("auth.error.noWallet"));
       }
 
       const accounts = await provider.request({ method: "eth_requestAccounts" });
       const address = accounts?.[0];
-      if (!address) throw new Error("No wallet account selected");
+      if (!address) throw new Error(t("auth.error.noAccount"));
 
       const nonceRes = await fetch("/api/auth/wallet/nonce", {
         method: "POST",
@@ -119,7 +124,7 @@ export default function AuthGate({ children }) {
         body: JSON.stringify({ address }),
       });
       const nonceData = await nonceRes.json().catch(() => null);
-      if (!nonceRes.ok) throw new Error(nonceData?.error || "Wallet challenge failed");
+      if (!nonceRes.ok) throw new Error(nonceData?.error || t("auth.error.challenge"));
 
       let signature;
       try {
@@ -141,10 +146,10 @@ export default function AuthGate({ children }) {
         body: JSON.stringify({ address, signature, message: nonceData.message }),
       });
       const verifyData = await verifyRes.json().catch(() => null);
-      if (!verifyRes.ok) throw new Error(verifyData?.error || "Wallet signature verification failed");
+      if (!verifyRes.ok) throw new Error(verifyData?.error || t("auth.error.verify"));
       setUser(verifyData.user);
     } catch (err) {
-      setError(err?.code === 4001 ? "Wallet signature was cancelled" : err.message);
+      setError(err?.code === 4001 ? t("auth.error.cancelled") : err.message);
     } finally {
       setBusy("");
     }
@@ -165,24 +170,26 @@ export default function AuthGate({ children }) {
         alignItems: 'center',
         minHeight: '100vh',
         minHeight: '100dvh',
-        background: '#CDDF15',
+        /* must stay equal to the lime baked into logo-128.png, or the logo's own
+           background reads as a visible square against the splash */
+        background: '#C7D903',
         margin: 0
       }}>
-        <Image 
-          src="/logo-128.png" 
-          alt="Bugglo Logo" 
-          width={64} 
-          height={64} 
-          style={{ 
-            animation: "pulse 2s infinite ease-in-out" 
-          }} 
+        <Image
+          src="/logo-128.png"
+          alt={t("a11y.logoAlt")}
+          width={64}
+          height={64}
+          style={{
+            animation: "pulse 2s infinite ease-in-out"
+          }}
         />
       </main>
     );
   }
 
   if (user || guest) {
-    const authUser = user || { provider: "guest", name: "Guest User" };
+    const authUser = user || { provider: "guest", name: t("auth.guestUser") };
     return (
       <AuthContext.Provider value={{ user: authUser, logout: () => { if(guest) setGuest(false); else logout(); }, busy }}>
         {children}
@@ -195,36 +202,38 @@ export default function AuthGate({ children }) {
       <div className="auth-left">
         <div className="auth-nav">
           <div className="auth-nav-logo">
-            <Image src="/logo-128.png" alt="Bugglo Logo" width={28} height={28} />
+            <Image src="/logo-128.png" alt={t("a11y.logoAlt")} width={28} height={28} />
             {APP_NAME}
           </div>
         </div>
-        
+
         <div className="auth-content">
           <h1>{t("auth.command")}.</h1>
-          <p>Your AI edge for Robinhood Network intelligence.</p>
-          
+          <p>{t("auth.tagline")}</p>
+
           <div className="auth-panel">
             {googleClientId ? (
               <div className="auth-google-wrap" ref={googleRef} />
             ) : (
-              <div className="auth-disabled">Set NEXT_PUBLIC_GOOGLE_CLIENT_ID to enable Google login.</div>
+              <div className="auth-disabled">{t("auth.googleDisabled")}</div>
             )}
-            
-            <div className="auth-divider">or</div>
-            
+
+            <div className="auth-divider">{t("auth.or")}</div>
+
             <button className="auth-wallet-btn" onClick={loginWallet} disabled={Boolean(busy)}>
-              <span>{busy === "wallet" ? "Waiting for signature..." : t("auth.metamask")}</span>
+              <span>{busy === "wallet" ? t("auth.waitingSignature") : t("auth.metamask")}</span>
             </button>
-            
+
             <button className="auth-guest-btn" onClick={() => setGuest(true)}>
               {t("auth.guest")}
             </button>
-            
+
             <div className="auth-disclaimer">
-              {t("auth.byContinuing")} <Link href="/privacy">{t("auth.privacy")}</Link>.
+              {tRich("auth.acknowledge", {
+                privacy: <Link href="/privacy">{t("auth.privacy")}</Link>,
+              })}
             </div>
-            
+
             {error ? <div className="auth-error" style={{marginTop: 8}}>{error}</div> : null}
           </div>
         </div>

@@ -128,7 +128,7 @@ export default function SampleExplorer() {
               {turn.role === "user" ? (
                 "You"
               ) : (
-                <Image src="/logo.png" alt="" width={24} height={24} />
+                <Image src="/logo-128.png" alt="" width={24} height={24} />
               )}
             </span>
             <div className={styles.turnContent}>

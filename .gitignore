@@ -5,3 +5,6 @@ out/
 .DS_Store
 npm-debug.log*
 .claude/
+
+# marketing drafts — not part of the product
+x.txt

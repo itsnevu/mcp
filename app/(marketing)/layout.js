@@ -12,7 +12,7 @@ export default function MarketingLayout({ children }) {
         <nav className={styles.topbarInner} aria-label="Primary">
           <Link href="/intro" className={styles.brand}>
             <span className={styles.brandMark}>
-              <Image src="/logo.png" alt="" width={24} height={24} />
+              <Image src="/logo-128.png" alt="" width={24} height={24} />
             </span>
             <span>{APP_NAME}</span>
           </Link>
@@ -38,7 +38,7 @@ export default function MarketingLayout({ children }) {
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
             <span className={styles.brandMark}>
-              <Image src="/logo.png" alt="" width={24} height={24} />
+              <Image src="/logo-128.png" alt="" width={24} height={24} />
             </span>
             <span>{APP_NAME}</span>
           </div>
@@ -48,11 +48,16 @@ export default function MarketingLayout({ children }) {
               <Link href="/">Try {APP_NAME}</Link>
               <Link href="/intro">Introducing {APP_NAME}</Link>
               <Link href="/docs#pwa">Install as app</Link>
+              <Link href="/faq">FAQ</Link>
+              <Link href="/learn">Data usage & Incognito Mode</Link>
             </div>
             <div>
               <h3>Developers</h3>
-              <Link href="/platform">Platform</Link>
+              {/* "/platform" used to live here and is not a route — it 404'd on
+                  every page of the site, which is the worst place to bleed crawl
+                  budget and link equity. The real developer surfaces are below. */}
               <Link href="/docs">Documentation</Link>
+              <Link href="/docs/robinx-mcp">RobinX MCP</Link>
               <Link href="/docs#api">API reference</Link>
               <Link href="/docs#live">Live mode setup</Link>
             </div>

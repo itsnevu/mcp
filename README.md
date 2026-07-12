@@ -1,43 +1,61 @@
-# HoodScope — Agentic AI untuk Robinhood Chain (Next.js)
+# Bugglo — Agentic AI for Robinhood Chain (Next.js)
 
-Chat UI untuk Robinhood Chain — dibangun dengan **Next.js (App Router) + React**,
-plus API route yang bisa berjalan sebagai demo lokal atau live mode lewat
-**Claude API + robinx-mcp**.
+A chat UI for Robinhood Chain — built with **Next.js (App Router) + React**, plus an
+API route that runs either as a local demo or in live mode via **Claude API + robinx-mcp**.
 
-## ▶️ Cara menjalankan
+## ▶️ Running it
 
 ```bash
-npm install     # sekali saja
-npm run dev     # buka http://localhost:3000
+npm install     # once
+npm run dev     # open http://localhost:3000
 ```
 
-Build produksi: `npm run build && npm start`.
+Production build: `npm run build && npm start`.
 
-## ✨ Enhancement
+## ✨ Features
 
-| Fitur | Keterangan |
+| Feature | Notes |
 |---|---|
-| 📈 Ticker tape | Strip harga berjalan di atas (demo feed, pause saat hover, loop seamless) |
-| 💬 Multi-chat history | Tersimpan di `localStorage`, bisa dibuka lagi & dihapus |
-| ⌨️ Slash commands | Ketik `/` → `/rugcheck`, `/trending`, `/sentiment`, `/wallet`, `/fud`, `/moving`, `/help` (navigasi ↑ ↓ Enter) |
-| 🛡️ Widget kaya | Rug-check report + gauge risiko, tabel trending + sparkline, sentiment bar, stat tile wallet |
-| 🎙️ Voice input | Web Speech API (Chrome/Safari); tap lagi untuk stop |
-| ⏹️ Stop generation | Tombol berubah jadi stop saat loading/mengetik — juga membatalkan request (AbortController + timeout 20s) |
-| 🔌 Status pill | Membedakan `Live data`, `Live ready`, `Demo mode`, dan `Backend offline` |
-| ⚙️ Settings modal | Ganti URL backend eksternal, test koneksi, clear semua chat |
-| 📋 Copy & timestamp | Hover/focus balasan agent → tombol copy; semua pesan ada jam |
-| 🌗 Light/dark theme | Toggle tersimpan, tanpa flash saat reload |
-| 📲 Installable PWA | Manifest, icon 192/512, service worker, dan offline fallback |
-| ⌘K / Esc | Fokus input dari mana saja; Esc menutup menu & modal |
-| 📱 Mobile | Sidebar auto-collapse + backdrop, layout & widget menyesuaikan |
+| 📈 Ticker tape | Scrolling price strip up top (demo feed, pauses on hover, seamless loop) |
+| 💬 Multi-chat history | Persisted to `localStorage`; reopenable and deletable |
+| ⌨️ Slash commands | Type `/` → `/rugcheck`, `/trending`, `/sentiment`, `/wallet`, `/fud`, `/moving`, `/help` (navigate with ↑ ↓ Enter) |
+| 🛡️ Rich widgets | Rug-check report + risk gauge, trending table + sparkline, sentiment bar, wallet stat tiles |
+| 🎙️ Voice input | Web Speech API (Chrome/Safari); tap again to stop |
+| ⏹️ Stop generation | The button becomes a stop control while loading/typing, and cancels the request too (AbortController + 20s timeout) |
+| 🔌 Status pill | Distinguishes `Live data`, `Live ready`, `Demo mode`, and `Backend offline` |
+| ⚙️ Settings | Theme, interface language, external backend URL + connection test, clear all chats |
+| 🌐 Languages | English, 中文, Español, 日本語, 한국어 — the whole app shell, not just a few strings |
+| 📋 Copy & timestamps | Hover/focus an agent reply for a copy button; every message is timestamped |
+| 🌗 Light/dark theme | Persisted, with no flash on reload |
+| 📲 Installable PWA | Manifest, 192/512 icons, service worker, offline fallback |
+| ⌘K / ⇧⌘, / Esc | Focus the input from anywhere; open Settings; Esc closes menus and modals |
+| 📱 Mobile | Sidebar auto-collapses behind a backdrop; layout and widgets adapt |
 
-Kode ini punya hardening untuk race condition pindah-chat saat balasan masih loading,
-validasi bentuk respons backend, guard IME composition, state localStorage yang korup,
-rate limit API, dan fallback demo eksplisit.
+The code is hardened against chat-switching race conditions while a reply is still
+streaming, malformed backend response shapes, IME composition, corrupt `localStorage`
+state, API rate limits, and it always has an explicit demo fallback.
 
-## 🔌 Menyambungkan ke Claude API + robinx-mcp (mode live)
+## 🌐 Adding or changing a language
 
-1. Buat `.env.local`:
+Locales live in [lib/locales/](lib/locales/), one file per language, each keyed by
+BCP-47 code. `en.js` is the source of truth.
+
+1. Add your keys to `lib/locales/en.js`.
+2. Mirror them in every other locale file.
+3. Register the language in `LANGUAGES` in [lib/i18n.js](lib/i18n.js).
+
+`npm test` fails the build if a locale is missing a key, adds one, or drops a
+`{token}` placeholder — so a half-translated locale cannot ship. In components,
+call `t("some.key")` for plain text and `tRich("some.key", { link: <Link .../> })`
+when a token has to resolve to a React element (this is what lets each language put
+the link where its own grammar wants it).
+
+Agent prompts (the `q`/`template` fields) deliberately stay in English regardless of
+the UI language — only what the user reads is translated.
+
+## 🔌 Connecting Claude API + robinx-mcp (live mode)
+
+1. Create `.env.local`:
 
    ```bash
    echo 'AUTH_SECRET=replace-with-long-random-secret' >> .env.local
@@ -49,10 +67,11 @@ rate limit API, dan fallback demo eksplisit.
    echo 'ROBINX_MAX_USD_PER_CALL=0.10' >> .env.local
    ```
 
-2. Jalankan app. `/api/chat` otomatis memakai Claude + RobinX MCP saat
-   `ANTHROPIC_API_KEY` ada. Kalau live backend gagal, respons tetap fallback ke demo.
+2. Run the app. `/api/chat` automatically uses Claude + RobinX MCP when
+   `ANTHROPIC_API_KEY` is set. If the live backend fails, the response still falls
+   back to demo.
 
-3. Kontrak API yang dimengerti UI:
+3. The API contract the UI understands:
 
    ```
    POST /api/chat  { message, mode, history[] }
@@ -60,43 +79,47 @@ rate limit API, dan fallback demo eksplisit.
    GET  /api/health → { ok, service, mode, capabilities }
    ```
 
-   Detail bentuk tiap `kind` ada di [lib/demoAgent.js](lib/demoAgent.js). Respons yang
-   valid otomatis dirender jadi widget (gauge, sparkline, dll); respons yang bentuknya
-   salah tidak akan merusak UI (ada validasi di [lib/text.js](lib/text.js)).
+   The shape of each `kind` is documented in [lib/demoAgent.js](lib/demoAgent.js).
+   Valid responses are rendered as widgets (gauge, sparkline, and so on); a
+   malformed response cannot break the UI (see the validation in [lib/text.js](lib/text.js)).
 
-## 📁 Struktur
+## 📁 Structure
 
 ```
 app/
-  layout.js            ← root layout + restore theme sebelum paint
-  page.js              ← halaman utama
-  globals.css          ← seluruh styling (design tokens dark/light)
-  api/chat/route.js    ← endpoint chat (demo) + panduan wiring Claude/MCP
-  api/health/route.js  ← health check untuk status pill
+  layout.js            ← root layout + theme restore before first paint
+  page.js              ← main page
+  globals.css          ← all styling (dark/light design tokens)
+  api/chat/route.js    ← chat endpoint (demo) + Claude/MCP wiring
+  api/health/route.js  ← health check behind the status pill
 components/
-  HoodScopeApp.jsx     ← state utama + orkestrasi send/stop/history
-  Sidebar.jsx          ← recents + suggested prompts
+  HoodScopeApp.jsx     ← top-level state + send/stop/history orchestration
+  AuthGate.jsx         ← Google + wallet login, guest mode
+  Sidebar.jsx          ← recents, suggested prompts, user menu
   InputBar.jsx         ← input, mode dropdown, slash commands, mic
-  ChatView.jsx         ← pesan + efek typewriter
+  ChatView.jsx         ← messages + typewriter effect
   Widgets.jsx          ← rugcheck/trending/sentiment/wallet widgets
-  SettingsModal.jsx    ← pengaturan backend
-  TickerTape.jsx       ← ticker harga demo
-  SvgSprite.jsx        ← ikon SVG
+  SettingsModal.jsx    ← settings (general, appearance, language, backend, data)
+  TickerTape.jsx       ← demo price ticker
+  SvgSprite.jsx        ← SVG icons
 lib/
-  demoAgent.js         ← agent demo (dipakai API route & fallback client)
-  text.js              ← render markdown mini, validasi reply, util teks
-  commands.js          ← daftar slash command
-legacy-static/         ← versi HTML+Node lama (arsip)
+  i18n.js              ← locale registry, {token} interpolation, legacy migration
+  I18nContext.jsx      ← I18nProvider, useI18n() → t / tRich
+  locales/             ← en, zh, es, ja, ko
+  demoAgent.js         ← demo agent (used by the API route and as a client fallback)
+  text.js              ← mini markdown renderer, reply validation, text utils
+  commands.js          ← slash command list
+legacy-static/         ← old HTML+Node version (archived)
 ```
 
-## ✅ Verifikasi
+## ✅ Verify
 
 ```bash
-npm run verify
+npm run verify   # lint + tests + production build
 ```
 
-## ⚠️ Catatan penting
+## ⚠️ Important notes
 
-- **Live tools berbayar**: beberapa tool RobinX MCP memakai x402/USDC. Tanpa
-  `ROBINX_WALLET_KEY`, tool berbayar dapat mengembalikan price probe, bukan data.
-- **Data demo**: angka dengan badge `DEMO DATA` adalah placeholder dan bukan saran finansial.
+- **Live tools cost money**: some RobinX MCP tools use x402/USDC. Without
+  `ROBINX_WALLET_KEY`, paid tools may return a price probe instead of data.
+- **Demo data**: figures carrying a `DEMO DATA` badge are placeholders, not financial advice.

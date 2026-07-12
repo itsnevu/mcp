@@ -11,7 +11,7 @@ import ChatView from "./ChatView";
 import SettingsModal from "./SettingsModal";
 import { demoAgent } from "@/lib/demoAgent";
 import { replyToText, isValidReply } from "@/lib/text";
-import { APP_NAME, isValidChatResponse } from "@/lib/chatContract";
+import { APP_NAME, CHAIN_NAME, isValidChatResponse } from "@/lib/chatContract";
 import { useAuth } from "./AuthGate";
 import { useI18n } from "@/lib/I18nContext";
 
@@ -32,27 +32,12 @@ function loadChatsFromStorage() {
   }
 }
 
+/* `q` is the agent prompt and stays English; `titleKey` is what the user reads. */
 const TRY_CARDS = [
-  {
-    icon: "i-shield",
-    title: ["Rug check a", "contract"],
-    q: "Rug check this contract: 0x",
-  },
-  {
-    icon: "i-sparkle",
-    title: ["Robinhood Chain", "trending on 𝕏"],
-    q: "What's trending about Robinhood Chain on X?",
-  },
-  {
-    icon: "i-search",
-    title: ["Search a ticker", "on 𝕏"],
-    q: "Search $HOOD ticker sentiment on X",
-  },
-  {
-    icon: "i-trend",
-    title: ["Trending tickers", "on 𝕏"],
-    q: "What are the trending tickers on X right now?",
-  },
+  { icon: "i-shield", titleKey: "suggest.rugCheck", q: "Rug check this contract: 0x" },
+  { icon: "i-sparkle", titleKey: "suggest.chainTrending", q: "What's trending about Robinhood Chain on X?" },
+  { icon: "i-search", titleKey: "suggest.searchTicker", q: "Search $HOOD ticker sentiment on X" },
+  { icon: "i-trend", titleKey: "suggest.trendingTickers", q: "What are the trending tickers on X right now?" },
 ];
 
 export default function HoodScopeApp() {
@@ -65,7 +50,11 @@ export default function HoodScopeApp() {
   const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isIncognito, setIsIncognito] = useState(false);
-  const [backendStatus, setBackendStatus] = useState({ kind: "demo", label: "Demo mode" });
+  /* Store the status KIND, not a rendered label — the label is looked up at
+     render time so it re-translates when the language changes. `labelKey` is
+     separate from `kind` because the demo-fallback state reads "Demo fallback"
+     while still being an offline kind. */
+  const [backendStatus, setBackendStatus] = useState({ kind: "demo", labelKey: "status.demo" });
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const [mode, setModeState] = useState("Auto");
@@ -73,7 +62,7 @@ export default function HoodScopeApp() {
   const [guestPromptCount, setGuestPromptCount] = useState(0);
 
   const auth = useAuth();
-  const { t, activeLang, setActiveLang, languages } = useI18n();
+  const { t, tRich } = useI18n();
 
   const busyRef = useRef(false);
   const seqRef = useRef(0); // generation token — bumping it invalidates in-flight sends
@@ -101,8 +90,13 @@ export default function HoodScopeApp() {
     try {
       const m = localStorage.getItem("hoodscope.mode") || localStorage.getItem("ranger.mode");
       if (m) setModeState(m);
-      const savedTheme = localStorage.getItem("hoodscope.theme") || "dark";
+      /* Mirror the pre-paint script in app/layout.js, which also honors the
+         legacy key — reading only the new one would flip a returning user's
+         theme back to dark after first paint. */
+      const savedTheme =
+        localStorage.getItem("hoodscope.theme") || localStorage.getItem("ranger.theme") || "dark";
       setTheme(savedTheme);
+      localStorage.setItem("hoodscope.theme", savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
       const g = parseInt(localStorage.getItem("hoodscope.guest_prompts") || "0", 10);
       setGuestPromptCount(isNaN(g) ? 0 : g);
@@ -149,13 +143,13 @@ export default function HoodScopeApp() {
       if (!res.ok) throw new Error();
       const data = await res.json().catch(() => null);
       if (data?.mode === "live-ready") {
-        setBackendStatus({ kind: "ready", label: "Live ready" });
+        setBackendStatus({ kind: "ready", labelKey: "status.ready" });
       } else {
-        setBackendStatus({ kind: "demo", label: "Demo mode" });
+        setBackendStatus({ kind: "demo", labelKey: "status.demo" });
       }
       return true;
     } catch {
-      setBackendStatus({ kind: "offline", label: "Backend offline" });
+      setBackendStatus({ kind: "offline", labelKey: "status.offline" });
       return false;
     }
   }, []);
@@ -165,9 +159,8 @@ export default function HoodScopeApp() {
       localStorage.setItem("hoodscope.backend", url);
     } catch {}
     const ok = await checkHealth();
-    if (ok) showToast("Backend updated and connected.");
-    else showToast("Backend is offline or unreachable.");
-  }, [checkHealth, showToast]);
+    showToast(ok ? t("toast.backendConnected") : t("toast.backendOffline"));
+  }, [checkHealth, showToast, t]);
 
   useEffect(() => {
     checkHealth();
@@ -218,9 +211,9 @@ export default function HoodScopeApp() {
         fetchCtrlRef.current?.abort(); // reply target is gone — stop wasted work
         goHome();
       }
-      showToast("Chat deleted");
+      showToast(t("toast.chatDeleted"));
     },
-    [activeId, goHome, showToast]
+    [activeId, goHome, showToast, t]
   );
 
   const clearAllChats = useCallback(() => {
@@ -228,8 +221,8 @@ export default function HoodScopeApp() {
     setChats([]);
     goHome();
     setSettingsOpen(false);
-    showToast("All chats cleared");
-  }, [goHome, showToast]);
+    showToast(t("toast.chatsCleared"));
+  }, [goHome, showToast, t]);
 
   const setMode = useCallback((m) => {
     setModeState(m);
@@ -238,20 +231,15 @@ export default function HoodScopeApp() {
     } catch {}
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      try {
-        localStorage.setItem("hoodscope.theme", next);
-      } catch {}
-      return next;
-    });
-  }, []);
-
-  const changeLanguage = useCallback((lang) => {
-    setActiveLang(lang);
-    try { localStorage.setItem("hoodscope.lang", lang); } catch {}
+  /* Value-driven, not a blind flip: Settings > Appearance is a radio group, so
+     clicking the already-active theme must be a no-op, not an inversion. It is
+     now the only way to change the theme — the home-footer toggle is gone. */
+  const applyTheme = useCallback((next) => {
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("hoodscope.theme", next);
+    } catch {}
   }, []);
 
   const onTypingDone = useCallback(() => {
@@ -270,13 +258,15 @@ export default function HoodScopeApp() {
       const text = String(rawText || "").trim();
       if (!text || busyRef.current) return;
       
-      if (auth?.user?.provider === 'guest' && guestPromptCount >= 3) {
-        showToast("Guest limit reached. Please log in to continue.");
+      const isGuest = auth?.user?.provider === 'guest';
+
+      if (isGuest && guestPromptCount >= 3) {
+        showToast(t("toast.guestLimit"));
         setTimeout(() => auth.logout(), 2500); // Kick back to auth
         return;
       }
       
-      if (auth?.user?.provider === 'guest') {
+      if (isGuest) {
         const newCount = guestPromptCount + 1;
         setGuestPromptCount(newCount);
         try { localStorage.setItem("hoodscope.guest_prompts", newCount.toString()); } catch {}
@@ -321,6 +311,8 @@ export default function HoodScopeApp() {
         let gotLive = false;
         let authRequired = false;
         try {
+          // Guests have no server session; /api/chat would 401. Answer locally instead.
+          if (isGuest) throw new Error("guest");
           const res = await fetch(backendBase() + "/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -336,11 +328,15 @@ export default function HoodScopeApp() {
             if (isValidChatResponse(data)) {
               reply = data.reply;
               gotLive = true;
-              setBackendStatus(data.source === "live" ? { kind: "live", label: "Live data" } : { kind: "demo", label: "Demo mode" });
+              setBackendStatus(
+                data.source === "live"
+                  ? { kind: "live", labelKey: "status.live" }
+                  : { kind: "demo", labelKey: "status.demo" }
+              );
             } else if (data && isValidReply(data.reply)) {
               reply = data.reply;
               gotLive = true;
-              setBackendStatus({ kind: "demo", label: "Demo mode" });
+              setBackendStatus({ kind: "demo", labelKey: "status.demo" });
             }
           }
         } catch {
@@ -353,12 +349,12 @@ export default function HoodScopeApp() {
         if (!gotLive) {
           if (stoppedByUserRef.current) {
             reply = null; // user hit stop while the request was in flight
-          } else if (authRequired) {
-            showToast("Session expired. Please log in again.");
+          } else if (authRequired && !isGuest) {
+            showToast(t("toast.sessionExpired"));
             setTimeout(() => window.location.reload(), 800);
             reply = null;
           } else {
-            setBackendStatus({ kind: "offline", label: "Demo fallback" });
+            setBackendStatus({ kind: "offline", labelKey: "status.fallback" });
             await new Promise((r) => setTimeout(r, 500));
             reply = demoAgent(text);
           }
@@ -387,7 +383,7 @@ export default function HoodScopeApp() {
       // Otherwise busy is released by onTypingDone when the typewriter ends.
       if (!stillCurrent) return;
     },
-    [activeId, mode, showToast, auth, guestPromptCount, isIncognito]
+    [activeId, mode, showToast, auth, guestPromptCount, isIncognito, t]
   );
 
   const onSuggest = useCallback(
@@ -408,6 +404,13 @@ export default function HoodScopeApp() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         inputRef.current?.focus();
+      }
+      /* The user menu advertises this chord next to "Settings"; bind it so the
+         hint is true (and so ⌘, does not fall through to the browser).
+         Keyed on e.code, not e.key — holding Shift turns "," into "<". */
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "Comma") {
+        e.preventDefault();
+        setSettingsOpen(true);
       }
       if (e.key === "Escape") setSettingsOpen(false);
     };
@@ -456,16 +459,13 @@ export default function HoodScopeApp() {
           onIncognitoChat={goIncognito}
           onSuggest={send}
           onOpenSettings={() => setSettingsOpen(true)}
-          activeLang={activeLang}
-          setActiveLang={changeLanguage}
-          languages={languages}
         />
         {!collapsed && <div className="sidebar-backdrop" onClick={() => setCollapsed(true)} />}
         <button
           className={"expand-btn" + (collapsed ? " visible" : "")}
           onClick={() => setCollapsed(false)}
-          title="Open sidebar"
-          aria-label="Open sidebar"
+          title={t("sidebar.open")}
+          aria-label={t("sidebar.open")}
         >
           <svg viewBox="0 0 24 24">
             <use href="#i-panel" />
@@ -474,9 +474,9 @@ export default function HoodScopeApp() {
 
         <main className="main">
           <TickerTape />
-          <div className={"status-pill " + backendStatus.kind} title="Backend status">
+          <div className={"status-pill " + backendStatus.kind} title={t("status.tooltip")}>
             <span className="dot" />
-            <span>{backendStatus.label}</span>
+            <span>{t(backendStatus.labelKey)}</span>
           </div>
 
           <div className="main-scroll" ref={scrollRef}>
@@ -496,18 +496,18 @@ export default function HoodScopeApp() {
                 ) : (
                   <div className="hero">
                     <div className="hero-logo">
-                      <Image src="/logo-512.png" alt={`${APP_NAME} logo`} width={84} height={84} priority />
+                      <Image src="/logo-512.png" alt={t("a11y.logoAlt")} width={84} height={84} priority />
                     </div>
                     <div className="hero-title-row">
                       <div className="hero-title">{APP_NAME}</div>
-                      <div className="beta-pill">BETA</div>
+                      <div className="beta-pill">{t("app.beta")}</div>
                     </div>
                   </div>
                 )}
 
                 {!isIncognito && (
                   <div className="hero-sub">
-                    What&apos;s moving on <span className="accent">Robinhood Chain</span>?
+                    {tRich("app.heroSub", { chain: <span className="accent">{CHAIN_NAME}</span> })}
                   </div>
                 )}
 
@@ -515,8 +515,11 @@ export default function HoodScopeApp() {
 
                 {isIncognito ? (
                   <div className="incognito-disclaimer">
-                    {t("app.incognitoDesc1")}<br/>
-                    <Link href="/learn">{t("app.learnMore")}</Link> {t("app.incognitoDesc2")}
+                    {t("app.incognitoDesc")}
+                    <br />
+                    {tRich("app.incognitoLearn", {
+                      link: <Link href="/learn">{t("app.learnMore")}</Link>,
+                    })}
                   </div>
                 ) : (
                   <>
@@ -529,11 +532,7 @@ export default function HoodScopeApp() {
                               <use href={`#${c.icon}`} />
                             </svg>
                           </div>
-                          <div className="card-title">
-                            {c.title[0]}
-                            <br />
-                            {c.title[1]}
-                          </div>
+                          <div className="card-title">{t(c.titleKey)}</div>
                         </button>
                       ))}
                     </div>
@@ -546,7 +545,9 @@ export default function HoodScopeApp() {
                     onClick={() =>
                       window.open(
                         "https://x.com/intent/tweet?text=" +
-                          encodeURIComponent("What's moving on Robinhood Chain today?"),
+                          /* Tweet body stays English — it is public content about an
+                             English-named chain, not UI chrome. */
+                          encodeURIComponent(`What's moving on ${CHAIN_NAME} today?`),
                         "_blank",
                         "noopener,noreferrer"
                       )
@@ -558,7 +559,7 @@ export default function HoodScopeApp() {
                       </svg>
                     </div>
                     <div className="x-banner-text">
-                      <span className="new-tag">NEW</span> &middot; Share a Robinhood Chain question on 𝕏
+                      <span className="new-tag">{t("app.newTag")}</span> &middot; {t("app.shareX")}
                     </div>
                     <div className="x-banner-arrow">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -571,16 +572,14 @@ export default function HoodScopeApp() {
 
                 <div className="home-footer">
                   <div className="disclaimer">
-                    {t("app.infoWarning")}<br />
-                    {t("app.byMessaging")} <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy Policy</Link>, and <Link href="/docs">Docs</Link>.
+                    {t("app.infoWarning")}
+                    <br />
+                    {tRich("app.legalLine", {
+                      terms: <Link href="/terms">{t("app.terms")}</Link>,
+                      privacy: <Link href="/privacy">{t("app.privacy")}</Link>,
+                      docs: <Link href="/docs">{t("app.docs")}</Link>,
+                    })}
                   </div>
-                  <button className="theme-toggle" onClick={toggleTheme}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                    </svg>
-                    <span>{theme === "dark" ? "Dark" : "Light"}</span>
-                    <span className="switch" />
-                  </button>
                 </div>
               </div>
             ) : (
@@ -599,9 +598,7 @@ export default function HoodScopeApp() {
           {chatting && (
             <div className="chat-input-dock">
               {inputBar(true)}
-              <div className="dock-disclaimer">
-                Information provided may be inaccurate or incorrect. Not financial advice.
-              </div>
+              <div className="dock-disclaimer">{t("app.dockDisclaimer")}</div>
             </div>
           )}
         </main>
@@ -614,10 +611,7 @@ export default function HoodScopeApp() {
         onSaveTest={onSaveBackend}
         onClearChats={clearAllChats}
         theme={theme}
-        onThemeChange={toggleTheme}
-        activeLang={activeLang}
-        onLangChange={changeLanguage}
-        languages={languages}
+        onThemeChange={applyTheme}
       />
       <div className={"toast" + (toastShow ? " show" : "")}>{toastMsg}</div>
     </>

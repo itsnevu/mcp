@@ -1,6 +1,6 @@
 "use client";
 
-/* Sidebar: brand, New Chat, persistent recents, suggested prompts, socials */
+/* Sidebar: brand, New Chat, persistent recents, suggested prompts, user menu */
 import Image from "next/image";
 import { APP_NAME } from "@/lib/chatContract";
 import { useState, useRef, useEffect } from "react";
@@ -19,13 +19,15 @@ const stroke = {
   strokeLinejoin: "round",
 };
 
+/* `q` is the prompt sent to the agent and stays English on purpose — the model
+   is prompted in English regardless of the UI language. Only `labelKey` is shown. */
 const SECTIONS = [
   {
-    label: "Sentiment",
+    labelKey: "sidebar.section.sentiment",
     x: true,
     items: [
       {
-        label: "Search a ticker on 𝕏",
+        labelKey: "suggest.searchTicker",
         q: "Search $HOOD ticker sentiment on X",
         icon: (
           <svg viewBox="0 0 24 24">
@@ -34,7 +36,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Trending tickers on 𝕏",
+        labelKey: "suggest.trendingTickers",
         q: "What are the trending tickers on X right now?",
         icon: (
           <svg viewBox="0 0 24 24">
@@ -43,7 +45,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Top 𝕏 accounts for a ticker",
+        labelKey: "suggest.topAccounts",
         q: "Who are the top X accounts talking about $HOOD?",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -55,7 +57,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Robinhood Chain trending on 𝕏",
+        labelKey: "suggest.chainTrending",
         q: "What's trending about Robinhood Chain on X?",
         icon: (
           <svg viewBox="0 0 24 24">
@@ -64,7 +66,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "FUD detection for a ticker",
+        labelKey: "suggest.fud",
         q: "Run FUD detection for $HOOD",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -75,7 +77,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Community sentiment for a ticker",
+        labelKey: "suggest.communitySentiment",
         q: "What's the community sentiment for $HOOD?",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -86,10 +88,10 @@ const SECTIONS = [
     ],
   },
   {
-    label: "Market",
+    labelKey: "sidebar.section.market",
     items: [
       {
-        label: "Top trending Robinhood Chain tokens",
+        labelKey: "suggest.topTokens",
         q: "Top trending Robinhood Chain tokens today",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -98,7 +100,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Latest DEX tokens on Robinhood Chain",
+        labelKey: "suggest.latestDex",
         q: "Show the latest DEX tokens on Robinhood Chain",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -112,10 +114,10 @@ const SECTIONS = [
     ],
   },
   {
-    label: "Security",
+    labelKey: "sidebar.section.security",
     items: [
       {
-        label: "Rug check a contract",
+        labelKey: "suggest.rugCheck",
         q: "Rug check this contract: 0x",
         icon: (
           <svg viewBox="0 0 24 24">
@@ -124,7 +126,7 @@ const SECTIONS = [
         ),
       },
       {
-        label: "Top holders of a token",
+        labelKey: "suggest.topHolders",
         q: "Who are the top holders of this token: 0x",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
@@ -135,10 +137,10 @@ const SECTIONS = [
     ],
   },
   {
-    label: "Wallet",
+    labelKey: "sidebar.section.wallet",
     items: [
       {
-        label: "Analyze a Robinhood Chain wallet",
+        labelKey: "suggest.analyzeWallet",
         q: "Analyze this Robinhood Chain wallet: 0x",
         icon: (
           <svg viewBox="0 0 24 24">
@@ -149,6 +151,12 @@ const SECTIONS = [
     ],
   },
 ];
+
+const Chevron = () => (
+  <span className="menu-trail" aria-hidden="true">
+    ›
+  </span>
+);
 
 export default function Sidebar({
   chats,
@@ -167,34 +175,57 @@ export default function Sidebar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const langBtnRef = useRef(null);
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setLangMenuOpen(false);
+  };
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
+    if (!menuOpen) return;
+    function onPointerDown(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) closeMenu();
+    }
+    function onKeyDown(e) {
+      if (e.key !== "Escape") return;
+      /* Escape backs out of the submenu first, then the menu — otherwise the
+         submenu is a trap for anyone not using a mouse. */
+      if (langMenuOpen) {
         setLangMenuOpen(false);
+        langBtnRef.current?.focus();
+      } else {
+        closeMenu();
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen, langMenuOpen]);
 
-  const LANGUAGES = ["English", "中文 (Chinese)", "Bahasa Indonesia", "Español", "日本語 (Japanese)", "한국어 (Korean)"];
+  const userLabel = auth?.user
+    ? auth.user.provider === "wallet"
+      ? shortAddr(auth.user.address)
+      : auth.user.email || auth.user.name
+    : t("menu.personal");
 
   return (
     <aside className={"sidebar" + (collapsed ? " collapsed" : "")}>
       <div className="sidebar-header">
         <div className="logo-badge">
-          <Image src="/logo-128.png" alt={`${APP_NAME} logo`} width={34} height={34} />
+          <Image src="/logo-128.png" alt={t("a11y.logoAlt")} width={34} height={34} />
         </div>
         <div className="brand-name">{APP_NAME}</div>
-        <button className="icon-btn" title="Settings" aria-label="Settings" onClick={onOpenSettings}>
+        <button className="icon-btn" title={t("sidebar.settings")} aria-label={t("sidebar.settings")} onClick={onOpenSettings}>
           <svg viewBox="0 0 24 24" {...stroke}>
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
-        <button className="icon-btn" title="Collapse sidebar" aria-label="Collapse sidebar" onClick={onCollapse}>
+        <button className="icon-btn" title={t("sidebar.collapse")} aria-label={t("sidebar.collapse")} onClick={onCollapse}>
           <svg viewBox="0 0 24 24">
             <use href="#i-panel" />
           </svg>
@@ -209,7 +240,13 @@ export default function Sidebar({
           </svg>
           {t("sidebar.newChat")}
         </button>
-        <button className="new-chat-btn incognito-btn" onClick={onIncognitoChat} style={{ width: 44, padding: 0, justifyContent: "center", background: "var(--bg-chip)", border: "1px solid var(--border)", color: "var(--text)" }} title="Incognito Chat" aria-label="Incognito Chat">
+        <button
+          className="new-chat-btn incognito-btn"
+          onClick={onIncognitoChat}
+          style={{ width: 44, padding: 0, justifyContent: "center", background: "var(--bg-chip)", border: "1px solid var(--border)", color: "var(--text)" }}
+          title={t("sidebar.incognitoChat")}
+          aria-label={t("sidebar.incognitoChat")}
+        >
           <svg viewBox="0 0 24 24" width="20" height="20">
             <use href="#i-ghost" />
           </svg>
@@ -245,13 +282,17 @@ export default function Sidebar({
                 <use href="#i-chat" />
               </svg>
               <span className="lbl" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {c.incognito && <svg viewBox="0 0 24 24" width="14" height="14" style={{ color: "var(--text-3)" }}><use href="#i-ghost" /></svg>}
+                {c.incognito && (
+                  <svg viewBox="0 0 24 24" width="14" height="14" style={{ color: "var(--text-3)" }}>
+                    <use href="#i-ghost" />
+                  </svg>
+                )}
                 {c.title}
               </span>
               <button
                 className="del"
-                title="Delete chat"
-                aria-label={`Delete chat: ${c.title}`}
+                title={t("sidebar.deleteChat")}
+                aria-label={t("sidebar.deleteChat")}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteChat(c.id);
@@ -270,19 +311,19 @@ export default function Sidebar({
           {t("sidebar.suggested")}
         </div>
         {SECTIONS.map((sec) => (
-          <div key={sec.label}>
+          <div key={sec.labelKey}>
             <div className="subsection-label">
               {sec.x ? (
                 <svg viewBox="0 0 24 24">
                   <use href="#i-x" />
                 </svg>
               ) : null}
-              {sec.label}
+              {t(sec.labelKey)}
             </div>
             {sec.items.map((it) => (
-              <button className="side-item" key={it.label} onClick={() => onSuggest(it.q)}>
+              <button className="side-item" key={it.labelKey} onClick={() => onSuggest(it.q)}>
                 {it.icon}
-                <span className="lbl">{it.label}</span>
+                <span className="lbl">{t(it.labelKey)}</span>
               </button>
             ))}
           </div>
@@ -291,96 +332,139 @@ export default function Sidebar({
 
       <div className="sidebar-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 12, position: "relative" }} ref={menuRef}>
         {menuOpen && (
-          <div className="popover-menu" style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, width: 280 }}>
-            <div style={{ padding: "12px 12px 8px 12px", color: "var(--text-3)", fontSize: 13, wordBreak: "break-all" }}>
-              {auth?.user ? (auth.user.email || auth.user.name || shortAddr(auth.user.address)) : "guest@bugglo.io"}
+          <div className="popover-menu" role="menu">
+            <div className="menu-email">
+              {auth?.user ? auth.user.email || auth.user.name || shortAddr(auth.user.address) : userLabel}
             </div>
-            
-            <button className="menu-item" onClick={() => { onOpenSettings(); setMenuOpen(false); }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-                Settings
-              </span>
-              <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>⇧⌘,</span>
+
+            <button className="menu-item" role="menuitem" onClick={() => { onOpenSettings(); closeMenu(); }}>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+              </svg>
+              {t("menu.settings")}
+              <span className="menu-trail">⇧⌘,</span>
             </button>
-            <div 
-              className="menu-item-wrapper"
-              style={{ position: "relative" }}
-              onMouseEnter={() => setLangMenuOpen(true)} 
+
+            <div
+              className="submenu-wrap"
+              onMouseEnter={() => setLangMenuOpen(true)}
               onMouseLeave={() => setLangMenuOpen(false)}
             >
-              <button className="menu-item">
-                <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  Language
-                </span>
-                <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>›</span>
+              {/* Opens rather than toggles: on a mouse, hovering the row has
+                  already opened the panel, so a toggle here would close what the
+                  pointer just opened. Keyboard and touch (no hover) still open it
+                  from a click. Escape, an outside click, or picking a language close it. */}
+              <button
+                ref={langBtnRef}
+                className="menu-item"
+                role="menuitem"
+                aria-haspopup="menu"
+                aria-expanded={langMenuOpen}
+                onClick={() => setLangMenuOpen(true)}
+              >
+                <svg viewBox="0 0 24 24" {...stroke}>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                {t("menu.language")}
+                <Chevron />
               </button>
-              
+
               {langMenuOpen && (
-                <div className="popover-menu submenu" style={{ position: "absolute", top: 0, left: "100%", marginLeft: 8, width: 220 }}>
-                  {LANGUAGES.map(lang => (
-                    <button 
-                      key={lang} 
-                      className="menu-item" 
-                      onClick={() => { setActiveLang(lang); setLangMenuOpen(false); setMenuOpen(false); }}
+                <div className="submenu-panel" role="menu">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      className="menu-item"
+                      role="menuitemradio"
+                      aria-checked={activeLang === lang.code}
+                      onClick={() => {
+                        setActiveLang(lang.code);
+                        closeMenu();
+                      }}
                     >
-                      {lang} {activeLang === lang && <svg viewBox="0 0 24 24" {...stroke} style={{color: "var(--accent)", marginLeft: "auto"}}><polyline points="20 6 9 17 4 12"/></svg>}
+                      {lang.label}
+                      {activeLang === lang.code && (
+                        <span className="menu-check">
+                          <svg viewBox="0 0 24 24" {...stroke}>
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            
-            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                Get help
-              </span>
-              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
-            </button>
-            <div className="menu-divider" />
-            
-            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                Upgrade plan
-              </span>
-              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
-            </button>
-            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Get apps and extensions
-              </span>
-              <span style={{ fontSize: 10, background: "var(--bg-chip)", padding: "2px 6px", borderRadius: 4, marginLeft: "auto" }}>Soon</span>
-            </button>
-            
-            <button className="menu-item" disabled style={{ opacity: 0.7, cursor: "not-allowed" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                Learn more
-              </span>
-              <span style={{ color: "var(--text-3)", fontSize: 12, marginLeft: "auto" }}>›</span>
+
+            <button className="menu-item" role="menuitem" disabled>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <path d="M12 17h.01" />
+              </svg>
+              {t("menu.getHelp")}
+              <span className="menu-badge">{t("menu.soon")}</span>
             </button>
 
             <div className="menu-divider" />
-            <button className="menu-item" onClick={auth?.logout} disabled={auth?.busy === "logout"}>
-              <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg viewBox="0 0 24 24" {...stroke}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                {auth?.busy === "logout" ? "Logging out..." : "Log out"}
-              </span>
+
+            <button className="menu-item" role="menuitem" disabled>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 16 16 12 12 8" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+              {t("menu.upgrade")}
+              <span className="menu-badge">{t("menu.soon")}</span>
+            </button>
+            <button className="menu-item" role="menuitem" disabled>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              {t("menu.getApps")}
+              <span className="menu-badge">{t("menu.soon")}</span>
+            </button>
+            <button className="menu-item" role="menuitem" disabled>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              {t("menu.learnMore")}
+              <span className="menu-badge">{t("menu.soon")}</span>
+            </button>
+
+            <div className="menu-divider" />
+            <button className="menu-item" role="menuitem" onClick={auth?.logout} disabled={auth?.busy === "logout"}>
+              <svg viewBox="0 0 24 24" {...stroke}>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              {auth?.busy === "logout" ? t("menu.loggingOut") : t("menu.logout")}
             </button>
           </div>
         )}
 
-        <button className="user-menu-btn" onClick={() => { setMenuOpen(!menuOpen); setLangMenuOpen(false); }}>
-          <div className="user-avatar">{auth?.user?.name?.[0]?.toUpperCase() || auth?.user?.email?.[0]?.toUpperCase() || "N"}</div>
+        <button
+          className="user-menu-btn"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
+        >
+          <div className="user-avatar">
+            {auth?.user?.name?.[0]?.toUpperCase() || auth?.user?.email?.[0]?.toUpperCase() || "N"}
+          </div>
           <div className="user-menu-info">
-            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-              {auth?.user ? (auth.user.provider === "wallet" ? shortAddr(auth.user.address) : (auth.user.email || auth.user.name)) : "Personal"}
+            <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "140px" }}>
+              {userLabel}
             </span>
-            <span className="user-menu-plan">Free tier</span>
+            <span className="user-menu-plan">{t("menu.freeTier")}</span>
           </div>
         </button>
       </div>

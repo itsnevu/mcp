@@ -4,11 +4,13 @@ import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import Widget from "./Widgets";
 import { renderRich, fmtTime, replyToText } from "@/lib/text";
+import { useI18n } from "@/lib/I18nContext";
 
 function UserMessage({ msg }) {
+  const { t } = useI18n();
   return (
     <div className="msg user">
-      <div className="avatar">You</div>
+      <div className="avatar">{t("chat.you")}</div>
       <div className="bubble">
         {msg.content}
         <div className="msg-time">{fmtTime(msg.ts)}</div>
@@ -18,6 +20,7 @@ function UserMessage({ msg }) {
 }
 
 function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scrollBottom }) {
+  const { t } = useI18n();
   const reply = msg.content;
   const isWidget = typeof reply === "object" && reply !== null && reply.kind && reply.kind !== "text";
   const intro =
@@ -64,10 +67,10 @@ function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scro
         <div className="msg-time">{fmtTime(msg.ts)}</div>
         <button
           className="copy-btn"
-          title="Copy"
-          aria-label="Copy reply"
+          title={t("chat.copy")}
+          aria-label={t("chat.copyAria")}
           onClick={() =>
-            navigator.clipboard?.writeText(replyToText(reply)).then(() => showToast("Copied to clipboard"))
+            navigator.clipboard?.writeText(replyToText(reply)).then(() => showToast(t("toast.copied")))
           }
         >
           <svg viewBox="0 0 24 24">
@@ -79,6 +82,14 @@ function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scro
   );
 }
 
+const MODELS = [
+  { id: "Bugglo V1", descKey: "model.buggloV1.desc" },
+  { id: "Bugglo Pro", descKey: "model.buggloPro.desc" },
+  { id: "Claude Opus 4.8", descKey: "model.sonnet.desc" },
+  { id: "Fable", descKey: "model.fable.desc" },
+  { id: "GPT-4o", descKey: "model.gpt4o.desc" },
+];
+
 export default function ChatView({
   messages,
   awaiting,
@@ -88,6 +99,7 @@ export default function ChatView({
   showToast,
   scrollBottom,
 }) {
+  const { t } = useI18n();
   const [modelOpen, setModelOpen] = useState(false);
   const [activeModel, setActiveModel] = useState("Bugglo V1");
   const modelRef = useRef(null);
@@ -101,14 +113,6 @@ export default function ChatView({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const MODELS = [
-    { id: "Bugglo V1", desc: "The ultimate on-chain intelligence agent." },
-    { id: "Bugglo Pro", desc: "Advanced reasoning and unlimited context." },
-    { id: "Claude 3.5 Sonnet", desc: "Anthropic's fastest and most intelligent model." },
-    { id: "Fable", desc: "Specialized for narrative generation." },
-    { id: "GPT-4o", desc: "OpenAI's latest flagship model." }
-  ];
 
   return (
     <div className="chat-wrap">
@@ -129,7 +133,7 @@ export default function ChatView({
                   {m.id}
                   {activeModel === m.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: "var(--accent)"}}><polyline points="20 6 9 17 4 12"/></svg>}
                 </div>
-                <div className="model-item-desc">{m.desc}</div>
+                <div className="model-item-desc">{t(m.descKey)}</div>
               </button>
             ))}
           </div>

@@ -274,7 +274,7 @@ button, input, textarea, select { font-family: inherit; }
 .auth-right-image {
   flex: 1;
   border-radius: 24px;
-  background: linear-gradient(rgba(203, 218, 27, 0.3), rgba(203, 218, 27, 0.3)), url('/trader_auth_bg.png') center/cover no-repeat;
+  background: linear-gradient(rgba(203, 218, 27, 0.3), rgba(203, 218, 27, 0.3)), url('/trader_auth_bg.jpg') center/cover no-repeat;
   background-blend-mode: overlay;
   box-shadow: inset 0 0 100px 30px var(--bg), 0 0 40px rgba(0,0,0,0.5);
   -webkit-mask-image: linear-gradient(to left, black 70%, transparent 100%);
@@ -622,110 +622,184 @@ button, input, textarea, select { font-family: inherit; }
 
 /* menus open downward on the home screen (input sits mid-page, nothing to
    clip below) and upward when docked at the bottom in chat mode */
-.modal {
+/* ============ SETTINGS MODAL (two-pane) ============
+   Deliberately NOT named .modal — a legacy single-column `.modal` rule lives
+   further down this file and would otherwise clobber the width. */
+.settings-modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  max-width: 900px;
-  width: 100%;
+  border-radius: 20px;
+  width: min(920px, calc(100vw - 48px));
+  height: min(640px, calc(100vh - 48px));
   display: flex;
   overflow: hidden;
-  height: 600px;
-  max-height: 85vh;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .settings-sidebar {
-  width: 240px;
+  width: 232px;
+  flex: none;
   background: var(--bg);
   border-right: 1px solid var(--border);
-  padding: 20px 0;
+  padding: 20px 12px;
   display: flex;
   flex-direction: column;
+  gap: 20px;
   overflow-y: auto;
 }
 
 .settings-sidebar-group {
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .settings-sidebar-label {
-  padding: 0 24px;
+  padding: 0 12px 6px;
   font-size: 11px;
   text-transform: uppercase;
   color: var(--text-3);
-  margin-bottom: 8px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 .settings-sidebar-tab {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 24px;
+  gap: 10px;
+  padding: 9px 12px;
   width: 100%;
   background: transparent;
   border: none;
+  border-radius: 8px;
   color: var(--text-2);
   font-size: 14px;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
+.settings-sidebar-tab svg { flex: none; }
 .settings-sidebar-tab:hover {
-  background: var(--bg-hover);
+  background: var(--bg-chip);
   color: var(--text);
 }
 .settings-sidebar-tab.active {
   background: var(--bg-chip);
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .settings-content {
   flex: 1;
-  padding: 40px;
+  min-width: 0;
+  padding: 28px 32px 32px;
   overflow-y: auto;
   position: relative;
 }
 .settings-content h2 {
-  font-size: 20px;
-  margin-bottom: 32px;
+  font-size: 22px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.settings-content-sub {
+  font-size: 13.5px;
+  color: var(--text-3);
+  margin-bottom: 28px;
 }
 
 .settings-close-btn {
   position: absolute;
   top: 20px;
   right: 20px;
+  display: flex;
   background: transparent;
   border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.settings-close-btn:hover { background: var(--bg-hover); color: var(--text); }
+.settings-close-btn:hover { background: var(--bg-chip); color: var(--text); }
 
+/* Label + helper text on the left, control on the right — the control column is
+   what collapsed before, so it gets a floor and the row wraps instead of clipping. */
 .settings-group {
-  margin-bottom: 32px;
-  display: grid;
-  grid-template-columns: 200px 1fr;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 24px;
-  align-items: start;
+  flex-wrap: wrap;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
 }
+.settings-group:first-of-type { border-top: none; padding-top: 0; }
+
 .settings-group-label {
+  flex: 1 1 220px;
+  min-width: 180px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
-  padding-top: 8px;
+}
+.settings-group-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-3);
 }
 .settings-group-content {
+  flex: 1 1 300px;
+  min-width: 260px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 10px;
 }
 
-.submenu { display: none; }
-.menu-item-wrapper:hover .submenu { display: flex; }
+.settings-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  min-height: 320px;
+  color: var(--text-3);
+  text-align: center;
+}
+.settings-empty h3 { font-size: 16px; font-weight: 600; color: var(--text); }
+.settings-empty p { font-size: 13.5px; max-width: 320px; }
+
+@media (max-width: 720px) {
+  .settings-modal {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+    flex-direction: column;
+  }
+  .settings-sidebar {
+    width: 100%;
+    flex-direction: row;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+  /* The group headings are vertical-list furniture; the rail is a chip strip here. */
+  .settings-sidebar-group { flex-direction: row; }
+  .settings-sidebar-label { display: none; }
+  .settings-sidebar-tab { width: auto; white-space: nowrap; }
+  .settings-content { padding: 24px 20px 32px; }
+  .settings-group-label, .settings-group-content { flex-basis: 100%; min-width: 0; }
+}
+
 .mode-menu {
   position: absolute;
   left: 0;
@@ -834,27 +908,6 @@ button, input, textarea, select { font-family: inherit; }
 .disclaimer { font-size: 13.5px; color: var(--text-3); text-align: center; line-height: 1.7; }
 .disclaimer a { color: var(--text-3); text-decoration: underline; }
 .disclaimer a:hover { color: var(--text-2); }
-
-.theme-toggle {
-  display: flex; align-items: center; gap: 9px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 8px 10px 8px 14px;
-  cursor: pointer;
-  color: var(--text);
-  font-size: 14px; font-weight: 600;
-}
-.theme-toggle svg { width: 15px; height: 15px; color: var(--text-2); }
-.switch { width: 40px; height: 22px; border-radius: 11px; background: var(--accent); position: relative; transition: background 0.2s; }
-.switch::after {
-  content: "";
-  position: absolute; top: 2px; right: 2px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #0a0a0a;
-  transition: transform 0.2s;
-}
-:root[data-theme="light"] .switch::after { transform: translateX(-18px); background: #fff; }
 
 /* ============ CHAT VIEW ============ */
 .chat-wrap {
@@ -1047,34 +1100,56 @@ button, input, textarea, select { font-family: inherit; }
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.modal {
-  width: 480px; max-width: calc(100vw - 40px);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
 @keyframes slideUp { from { transform: translateY(20px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 
-.modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-.modal .sub { font-size: 13.5px; color: var(--text-3); margin-bottom: 24px; line-height: 1.55; }
-.modal label { display: block; font-size: 12px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin: 18px 0 8px; }
-.modal input[type="text"] {
+.settings-input {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--text);
   font-size: 14px; font-family: inherit;
-  padding: 12px 14px;
+  padding: 10px 12px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.modal input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
-.modal-row { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; justify-content: flex-end; }
-.modal-row .btn.danger { margin-right: auto; }
+.settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+/* A 5-option segmented control would not fit the control column, so language
+   uses a select. Arrow is inlined as a data URI — currentColor is not available
+   to background-image, so the two themes each get their own stroke. */
+.settings-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 10px 34px 10px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.settings-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+.settings-status {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+/* nowrap: "ステータス" was breaking mid-word when the flex line got tight. */
+.settings-status b { flex: none; white-space: nowrap; color: var(--text-2); font-weight: 600; }
+.settings-actions { display: flex; justify-content: flex-end; }
 
 /* Custom Segmented Control */
 .segmented-control {
@@ -1148,254 +1223,56 @@ button, input, textarea, select { font-family: inherit; }
   margin-bottom: 16px;
 }
 
-.docs-page {
-  min-height: 100vh;
-  height: auto;
-  overflow: auto;
-  background: var(--bg);
-  color: var(--text);
-  padding: 22px;
+/* ============ FAQ ============ */
+/* The FAQ answers are rendered from HTML strings that double as the FAQPage
+   structured data, so they cannot carry inline styles — the styling lives here
+   instead, hung off .faq-answer. */
+.faq-section {
+  margin-top: 40px;
 }
-.docs-topbar {
-  width: min(1180px, 100%);
-  margin: 0 auto 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-sidebar);
-  border-radius: 14px;
-  padding: 12px 14px;
+.faq-section > h2 {
+  font-size: 24px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
-.docs-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 800;
+.faq-item {
+  margin-bottom: 32px;
 }
-.docs-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent);
-  color: var(--on-accent);
-  box-shadow: 0 0 14px var(--accent-glow);
-}
-.docs-navlinks {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.docs-navlinks a,
-.docs-primary-link {
-  color: var(--text-2);
-  text-decoration: none;
-  border: 1px solid var(--border);
-  background: var(--bg-chip);
-  border-radius: 10px;
-  padding: 8px 11px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.docs-navlinks a:hover,
-.docs-primary-link:hover {
-  color: var(--text);
-  border-color: var(--text-3);
-}
-.docs-hero,
-.docs-section,
-.docs-grid {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-}
-.docs-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 24px;
-  align-items: end;
-  padding: 44px 0 34px;
-}
-.docs-kicker {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.faq-item > h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
   color: var(--accent);
-  margin-bottom: 10px;
 }
-.docs-hero h1 {
-  font-size: clamp(38px, 6vw, 70px);
-  line-height: 0.98;
-  margin-bottom: 18px;
-}
-.docs-hero p,
-.docs-section-head p,
-.docs-card p,
-.docs-callout p {
+.faq-answer p {
   color: var(--text-2);
-  line-height: 1.7;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
-.docs-status-panel,
-.docs-card,
-.docs-endpoint,
-.docs-callout {
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  border-radius: 8px;
+.faq-answer p:last-child {
+  margin-bottom: 0;
 }
-.docs-status-panel {
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-.docs-status-panel > div {
-  display: grid;
-  grid-template-columns: 12px 1fr;
-  column-gap: 10px;
-  row-gap: 2px;
-  align-items: center;
-}
-.docs-status-panel small {
-  grid-column: 2;
-  color: var(--text-3);
-}
-.docs-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-3);
-}
-.docs-dot.demo { background: var(--warn); }
-.docs-dot.ready,
-.docs-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-.docs-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 36px;
-}
-.docs-card {
-  padding: 20px;
-}
-.docs-card.span-2 {
-  grid-column: span 2;
-}
-.docs-card h2,
-.docs-card h3,
-.docs-section-head h2,
-.docs-callout h2 {
-  margin-bottom: 10px;
-}
-.docs-list {
+.faq-answer ul {
   color: var(--text-2);
-  line-height: 1.75;
-  padding-left: 18px;
+  line-height: 1.6;
+  padding-left: 20px;
+  margin-bottom: 12px;
 }
-.docs-page code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.faq-answer li {
+  margin-bottom: 8px;
 }
-.docs-code {
-  margin-top: 12px;
-  overflow-x: auto;
-  background: var(--bg-chip);
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  padding: 14px;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.55;
-}
-.docs-section {
-  margin-bottom: 36px;
-}
-.docs-section-head {
-  display: grid;
-  grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: end;
-  margin-bottom: 16px;
-}
-.docs-endpoints {
-  display: grid;
-  gap: 16px;
-}
-.docs-endpoint {
-  padding: 18px;
-}
-.docs-endpoint-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.docs-pill {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-radius: 7px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 800;
-}
-.docs-two-col {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 12px;
-}
-.docs-two-col h4 {
-  color: var(--text-3);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.docs-kind-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-}
-.docs-kind {
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  border-radius: 8px;
-  padding: 14px;
-  display: grid;
-  gap: 8px;
-}
-.docs-kind code {
-  color: var(--accent);
-  font-weight: 800;
-}
-.docs-kind span {
-  color: var(--text-2);
-  line-height: 1.55;
-  font-size: 13px;
-}
-.docs-callout {
-  padding: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 42px;
-}
-.docs-primary-link {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
-  white-space: nowrap;
+.faq-answer code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.14));
+  color: var(--text-1);
 }
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1100px) {
   .try-grid { grid-template-columns: repeat(2, 1fr); }
-  .docs-kind-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 780px) {
   .sidebar { position: fixed; z-index: 70; height: 100%; height: 100dvh; }
@@ -1422,31 +1299,6 @@ button, input, textarea, select { font-family: inherit; }
   .trend-row { grid-template-columns: 18px 64px 1fr 60px; gap: 8px; }
   .trend-row .spark { display: none; }
   .stat-grid { grid-template-columns: 1fr; }
-  .docs-page { padding: 14px; }
-  .docs-topbar,
-  .docs-hero,
-  .docs-section-head,
-  .docs-two-col,
-  .docs-grid {
-    grid-template-columns: 1fr;
-  }
-  .docs-topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .docs-navlinks {
-    justify-content: flex-start;
-  }
-  .docs-card.span-2 {
-    grid-column: span 1;
-  }
-  .docs-kind-grid {
-    grid-template-columns: 1fr;
-  }
-  .docs-callout {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 /* ============ DROPDOWN & MENU STYLES ============ */
@@ -1491,52 +1343,120 @@ button, input, textarea, select { font-family: inherit; }
   color: var(--accent);
   font-weight: 600;
 }
+/* Anchored above the user button. The language submenu reuses the look but not
+   the anchoring, so it gets its own class rather than overriding `bottom` inline. */
 .popover-menu {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 12px;
-  width: 240px;
+  left: 6px;
+  right: 6px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  padding: 8px;
+  padding: 6px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   animation: popUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 @keyframes popUp {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+.menu-email {
+  padding: 10px 12px 8px;
+  font-size: 12.5px;
+  color: var(--text-3);
+  word-break: break-all;
+}
 .menu-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 6px;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
   color: var(--text);
   font-size: 14px;
+  font-family: inherit;
   cursor: pointer;
   border: none;
   background: transparent;
   text-align: left;
   transition: background 0.15s ease;
 }
-.menu-item:hover {
-  background: var(--bg-chip);
-}
+.menu-item:hover:not(:disabled) { background: var(--bg-chip); }
+.menu-item:disabled { color: var(--text-3); cursor: default; }
 .menu-item svg {
   width: 16px;
   height: 16px;
+  flex: none;
   color: var(--text-3);
 }
+/* Pushes shortcut hints, chevrons, "Soon" badges and checkmarks to the right edge.
+   All three are flex:none + nowrap: a CJK label like "プランをアップグレード" is far
+   wider than its English source and would otherwise squeeze the trailing element
+   until it wrapped mid-word ("まもな / く"). The label wraps instead. */
+.menu-item .menu-trail {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.menu-item .menu-badge {
+  margin-left: auto;
+  flex: none;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--bg-chip);
+  color: var(--text-3);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.menu-item .menu-check { margin-left: auto; flex: none; color: var(--accent); }
+.menu-item .menu-check svg { color: var(--accent); }
 .menu-divider {
   height: 1px;
   background: var(--border);
-  margin: 6px 0;
+  margin: 5px 0;
+}
+
+/* Flies out to the right of the "Language" row. `top: auto` is load-bearing:
+   it must not inherit .popover-menu's bottom-anchoring. */
+.submenu-wrap { position: relative; }
+.submenu-panel {
+  position: absolute;
+  bottom: -6px;
+  left: 100%;
+  width: 190px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  /* Bridges the gap to the parent row so the pointer can cross without a mouseleave. */
+  margin-left: 6px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: popUp 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.submenu-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  width: 8px;
 }
 .model-selector-wrap {
   position: absolute;

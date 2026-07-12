@@ -14,10 +14,7 @@
     },
     "boo-crypto": {
       "command": "npx",
-      "args": [
-        "-y",
-        "boo-crypto-mcp"
-      ]
+      "args": ["-y", "boo-crypto-mcp@1.0.1"]
     },
     "fuse": {
       "url": "https://mcp.fuse.io/mcp"
@@ -27,34 +24,24 @@
     },
     "etherscan": {
       "command": "npx",
-      "args": [
-        "-y",
-        "etherscan-mcp-server"
-      ]
+      "args": ["-y", "etherscan-mcp-server@1.0.1"],
+      "envFrom": ["ETHERSCAN_API_KEY"]
     },
     "hoodpocket": {
+      "disabled": true,
       "command": "npx",
-      "args": [
-        "-y",
-        "hoodpocket"
-      ]
+      "args": ["-y", "hoodpocket@0.4.0"]
     },
     "hooddomains": {
       "command": "npx",
-      "args": [
-        "-y",
-        "hooddomains-mcp"
-      ],
+      "args": ["-y", "hooddomains-mcp@0.1.1"],
       "env": {
         "HOOD_RPC_URL": "https://rpc.mainnet.chain.robinhood.com"
       }
     },
     "dexscreener": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@iflow-mcp/janswist-dexscreener-mcp-server"
-      ]
+      "args": ["-y", "@iflow-mcp/janswist-dexscreener-mcp-server@1.0.0"]
     }
   }
 }
