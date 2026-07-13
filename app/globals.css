@@ -253,6 +253,14 @@ button, input, textarea, select { font-family: inherit; }
   display: flex;
   justify-content: center;
 }
+/* Tombol GSI yang dipersonalisasi ("Continue as …") dirender Google di dalam iframe
+   lintas-origin, jadi isinya tak bisa distyle. Kanvas iframe itu mewarisi color-scheme
+   halaman — dan root memakai "dark light", yang membolehkan Chrome mengecatnya putih.
+   Mengunci ke dark di sini membuat latarnya gelap tanpa menyentuh skema halaman. */
+.auth-google-wrap iframe {
+  color-scheme: dark;
+  background: transparent;
+}
 .auth-disabled, .auth-error, .auth-note {
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.05);
@@ -282,6 +290,22 @@ button, input, textarea, select { font-family: inherit; }
 }
 @media (max-width: 900px) {
   .auth-right { display: none; }
+}
+@media (max-width: 600px) {
+  /* .auth-left adalah flex item, dan flex item punya min-width: auto — ia menolak
+     menyusut di bawah lebar isinya. Isinya: panel 380px + padding 40px kiri-kanan
+     = 460px, yang meluber di layar 390px dan bikin halaman bisa digeser samping.
+     min-width: 0 mencabut penolakan itu; sisanya sekadar memberi ruang bernapas. */
+  .auth-left {
+    min-width: 0;
+    padding: 24px 16px;
+  }
+  .auth-panel {
+    max-width: 100%;
+    padding: 20px 16px;
+  }
+  .auth-content h1 { font-size: 34px; }
+  .auth-content p { font-size: 16px; margin-bottom: 28px; }
 }
 .auth-user-pill {
   position: fixed;

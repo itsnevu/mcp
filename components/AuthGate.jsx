@@ -90,13 +90,18 @@ export default function AuthGate({ children }) {
             }
           },
         });
+        /* Google merender tombolnya pada lebar tetap yang kita berikan — ia tidak
+           ikut menyusut bersama panelnya. Angka mati 316 meluber keluar panel di
+           layar 360px ke bawah, jadi lebarnya diambil dari wadahnya sendiri.
+           GSI menolak nilai di luar 200–400, maka dijepit ke rentang itu. */
+        const wrapWidth = googleRef.current.offsetWidth || 316;
         window.google.accounts.id.renderButton(googleRef.current, {
           theme: "filled_black",
           size: "large",
           shape: "rectangular",
           text: "continue_with",
           locale: activeLang,
-          width: 316,
+          width: Math.max(200, Math.min(400, Math.round(wrapWidth))),
         });
       })
       .catch(() => setError(t("auth.error.googleScript")));

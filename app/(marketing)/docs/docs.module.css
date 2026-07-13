@@ -803,7 +803,10 @@
 
 @media (max-width: 1000px) {
   .container {
-    grid-template-columns: 1fr;
+    /* minmax(0, …), bukan 1fr. Track `1fr` punya minimum auto, jadi ia melebar
+       mengikuti isi terlebarnya — tabel dan blok kode — sampai kolomnya lebih
+       lebar dari layar dan .tableWrap/.code pre tak pernah sempat men-scroll. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 28px;
     padding: 28px 20px 72px;
   }
@@ -846,7 +849,7 @@
   .modes,
   .grid,
   .cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .cardWide {
@@ -854,7 +857,7 @@
   }
 
   .tool {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 
