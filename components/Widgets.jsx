@@ -2,7 +2,7 @@
 
 /* Rich reply widgets: rug-check report, trending sparklines, sentiment bar, wallet tiles */
 
-function WidgetHead({ icon, title, demo, children }) {
+function WidgetHead({ icon, title, children }) {
   return (
     <div className="widget-head">
       <svg viewBox="0 0 24 24">
@@ -10,7 +10,6 @@ function WidgetHead({ icon, title, demo, children }) {
       </svg>
       <span className="widget-title">{title}</span>
       {children}
-      {demo ? <span className="demo-tag">DEMO DATA</span> : null}
     </div>
   );
 }
@@ -45,25 +44,19 @@ export function Sparkline({ data, up }) {
 }
 
 function RugcheckWidget({ reply }) {
-  const score = Math.min(100, Math.max(0, reply.riskScore ?? 0));
-  const cls = score < 34 ? "low" : score < 67 ? "med" : "high";
+  const verdict = String(reply.verdict || "UNKNOWN").toUpperCase();
+  const cls = verdict.includes("FAIL") || verdict.includes("HIGH")
+    ? "high"
+    : verdict.includes("WARN") || verdict.includes("MED")
+      ? "med"
+      : "low";
   return (
     <div className="widget">
-      <WidgetHead icon="i-shield" title="Rug Check Report" demo={reply.demo}>
+      <WidgetHead icon="i-shield" title="Rug Check Report">
         <span className={`verdict-pill ${cls}`}>{reply.verdict}</span>
       </WidgetHead>
       <div style={{ marginBottom: 10 }}>
         <span className="addr-chip">{reply.address}</span>
-      </div>
-      <div className="gauge">
-        <div className="gauge-track">
-          <div className="gauge-marker" style={{ left: `${score}%` }} />
-        </div>
-        <div className="gauge-labels">
-          <span>SAFER</span>
-          <span>Risk score: {score}/100</span>
-          <span>RISKIER</span>
-        </div>
       </div>
       {(reply.checks || []).map((c, i) => (
         <div className={`check-row ${c.ok ? "ok" : "warn"}`} key={i}>
@@ -87,7 +80,7 @@ function RugcheckWidget({ reply }) {
 function TrendingWidget({ reply }) {
   return (
     <div className="widget">
-      <WidgetHead icon="i-trend" title="Trending on 𝕏" demo={reply.demo} />
+      <WidgetHead icon="i-trend" title="Trending on 𝕏" />
       {(reply.items || []).map((it, i) => (
         <div className="trend-row" key={it.ticker + i}>
           <span className="rank">{i + 1}</span>
@@ -111,7 +104,7 @@ function TrendingWidget({ reply }) {
 function SentimentWidget({ reply }) {
   return (
     <div className="widget">
-      <WidgetHead icon="i-sparkle" title={`𝕏 Sentiment — ${reply.ticker}`} demo={reply.demo} />
+      <WidgetHead icon="i-sparkle" title={`𝕏 Sentiment — ${reply.ticker}`} />
       <div className="senti-bar">
         <span className="b" style={{ width: `${reply.bullish}%` }} />
         <span className="n" style={{ width: `${reply.neutral}%` }} />
@@ -140,7 +133,7 @@ function SentimentWidget({ reply }) {
 function WalletWidget({ reply }) {
   return (
     <div className="widget">
-      <WidgetHead icon="i-wallet" title="Wallet Analysis" demo={reply.demo} />
+      <WidgetHead icon="i-wallet" title="Wallet Analysis" />
       <div style={{ marginBottom: 10 }}>
         <span className="addr-chip">{reply.address}</span>
       </div>

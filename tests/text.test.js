@@ -14,8 +14,8 @@ describe("text helpers", () => {
   });
 
   it("rejects malformed rich replies", () => {
-    expect(isValidReply({ kind: "sentiment", ticker: "$HOOD", bullish: 50, bearish: 20 })).toBe(false);
-    expect(isValidReply({ kind: "trending", items: [{ mentions: 10 }] })).toBe(false);
+    expect(isValidReply({ kind: "sentiment", ticker: "$HOOD", bullish: "missing", bearish: "missing" })).toBe(false);
+    expect(isValidReply({ kind: "trending", items: [{ mentions: "missing" }] })).toBe(false);
     expect(isValidReply({ kind: "wallet", address: "0xabc", stats: [] })).toBe(true);
   });
 
@@ -24,7 +24,6 @@ describe("text helpers", () => {
       kind: "rugcheck",
       address: "0xabc",
       verdict: "LOW RISK",
-      riskScore: 18,
       checks: [{ label: "Ownership", note: "renounced" }],
       summary: "DYOR",
     });

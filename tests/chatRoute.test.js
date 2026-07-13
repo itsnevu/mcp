@@ -4,8 +4,8 @@ import { AUTH_COOKIE, createSignedToken } from "@/lib/auth";
 
 const ENGINE_VARS = ["ROBINX_ENGINE_KEY", "ROBINX_ENGINE_URL", "ROBINX_ENGINE_MODEL"];
 
-/* Live mode needs all three. Clearing them keeps these tests on the demo path, so the
-   suite never reaches for the network or spends a cent — assert that, don't assume it. */
+/* Live mode needs all three. Clearing them keeps these tests off the network and proves the
+   route refuses to invent an answer when the engine is not configured. */
 function withoutLiveEngine(run) {
   const saved = Object.fromEntries(ENGINE_VARS.map((name) => [name, process.env[name]]));
   for (const name of ENGINE_VARS) delete process.env[name];
@@ -34,15 +34,14 @@ function request(body, { authenticated = true, ip } = {}) {
 }
 
 describe("POST /api/chat", () => {
-  it("returns a demo response when live credentials are not configured", async () => {
+  it("returns unavailable when live credentials are not configured", async () => {
     await withoutLiveEngine(async () => {
       const res = await POST(request({ message: "What can you do?", mode: "Auto", history: [] }));
       const data = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(data.source).toBe("demo");
-      expect(data.backend).toBe("demo");
-      expect(data.reply).toMatchObject({ kind: "text" });
+      expect(res.status).toBe(503);
+      expect(data.unavailable).toBe(true);
+      expect(data.reply).toBeUndefined();
     });
   });
 
@@ -70,7 +69,6 @@ describe("POST /api/chat", () => {
     expect(missing.status).toBe(400);
   });
 
-  // The demo path deliberately sleeps 250ms per request, so a 31-deep flood needs headroom.
   it("answers a flood with 429 server-busy and never names the limit that fired", { timeout: 20_000 }, async () => {
     await withoutLiveEngine(async () => {
       const ip = `flood-${Math.random()}`;

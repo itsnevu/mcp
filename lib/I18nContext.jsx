@@ -76,7 +76,7 @@ export function I18nProvider({ children }) {
   }, []);
 
   /* Keeps <html lang> honest — screen readers and the browser's translate
-     prompt read this, and it is otherwise hardcoded to "en" in app/layout.js. */
+     prompt read this; app/layout.js only carries the static document default. */
   useEffect(() => {
     document.documentElement.lang = activeLang;
   }, [activeLang]);

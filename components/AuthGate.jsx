@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/chatContract";
 import { useI18n } from "@/lib/I18nContext";
+import { resolveProvider, startWalletDiscovery, walletHelpUrl } from "@/lib/walletProviders";
 
 export const AuthContext = createContext(null);
 export function useAuth() {
@@ -13,6 +14,16 @@ export function useAuth() {
 
 function shortAddress(address) {
   return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
+}
+
+/* personal_sign takes the message hex-encoded — MetaMask's docs call it a historical quirk
+   and Phantom's docs do the same. The decoded bytes are the identical UTF-8, so the
+   EIP-191 preimage the server re-derives with viem is unchanged, and both wallets still show
+   the human-readable text in their signing prompt. */
+function toHexMessage(message) {
+  return `0x${Array.from(new TextEncoder().encode(message))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 function loadGoogleScript() {
@@ -38,9 +49,9 @@ function loadGoogleScript() {
 export default function AuthGate({ children }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [guest, setGuest] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [helpLink, setHelpLink] = useState(null);
   const googleRef = useRef(null);
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const { t, tRich, activeLang } = useI18n();
@@ -59,12 +70,17 @@ export default function AuthGate({ children }) {
     refreshSession();
   }, [refreshSession]);
 
-  /* Re-runs on `guest` too: leaving guest mode (the prompt limit kicks the visitor
-     back here) unmounts the gate and remounts it with a *fresh*, empty div for the
-     button. Without `guest` in the deps nothing re-renders into that new node, and
-     the sign-in screen comes back with the Google button silently missing. */
+  /* Collect the wallets' EIP-6963 announcements while the visitor is still reading the page,
+     so that clicking a wallet button resolves its provider synchronously. */
   useEffect(() => {
-    if (loading || user || guest || !googleClientId || !googleRef.current) return;
+    startWalletDiscovery();
+  }, []);
+
+  /* A guest is now just a `user` whose provider is "guest" — there is no separate `guest`
+     flag to depend on. Logging out of a guest session clears `user`, which remounts the gate
+     with a fresh div and re-runs this effect to paint the Google button into it. */
+  useEffect(() => {
+    if (loading || user || !googleClientId || !googleRef.current) return;
     let cancelled = false;
     loadGoogleScript()
       .then(() => {
@@ -74,6 +90,7 @@ export default function AuthGate({ children }) {
           callback: async ({ credential }) => {
             setBusy("google");
             setError("");
+            setHelpLink(null);
             try {
               const res = await fetch("/api/auth/google", {
                 method: "POST",
@@ -90,33 +107,59 @@ export default function AuthGate({ children }) {
             }
           },
         });
-        /* Google merender tombolnya pada lebar tetap yang kita berikan — ia tidak
-           ikut menyusut bersama panelnya. Angka mati 316 meluber keluar panel di
-           layar 360px ke bawah, jadi lebarnya diambil dari wadahnya sendiri.
-           GSI menolak nilai di luar 200–400, maka dijepit ke rentang itu. */
-        const wrapWidth = googleRef.current.offsetWidth || 316;
+        /* theme is what put the white frame around this button: "filled_black" makes GSI
+           paint a 36px white tile behind the G and drop the button's border entirely.
+           "outline_dark" paints neither, and its native look — 40px tall, 4px radius,
+           #131314 on a 1px #8e918f stroke — is already .auth-wallet-btn.
+           No `width` either: without it GSI writes no inline width, so the button simply
+           fills the panel and follows it on resize (see .auth-google-wrap in globals.css).
+           renderButton empties the container before it draws, so re-running this effect on a
+           language change redraws the button rather than stacking a second one. */
         window.google.accounts.id.renderButton(googleRef.current, {
-          theme: "filled_black",
+          theme: "outline_dark",
           size: "large",
           shape: "rectangular",
           text: "continue_with",
+          logo_alignment: "center",
           locale: activeLang,
-          width: Math.max(200, Math.min(400, Math.round(wrapWidth))),
         });
       })
       .catch(() => setError(t("auth.error.googleScript")));
     return () => {
       cancelled = true;
     };
-  }, [googleClientId, loading, user, guest, activeLang, t]);
+  }, [googleClientId, loading, user, activeLang, t]);
 
-  const loginWallet = async () => {
-    setBusy("wallet");
+  /* Mints a REAL signed session from the server (24h, provider:"guest") instead of flipping a
+     boolean in React. That boolean was the whole bug: with no cookie, /api/chat would have
+     401'd, so the app quietly stopped calling it and answered guests from a local browser script
+     in the browser. A guest now carries a cookie the backend accepts, gets live answers, and
+     is metered by IP server-side (lib/rateLimit.js, guest tier). */
+  const loginGuest = useCallback(async () => {
+    setBusy("guest");
     setError("");
     try {
-      const provider = window.ethereum;
-      if (!provider?.request) {
-        throw new Error(t("auth.error.noWallet"));
+      const res = await fetch("/api/auth/guest", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.user) throw new Error(t("auth.error.guest"));
+      setUser(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy("");
+    }
+  }, [t]);
+
+  const loginWallet = async (wallet) => {
+    setBusy(wallet);
+    setError("");
+    setHelpLink(null);
+    try {
+      const provider = resolveProvider(wallet);
+      if (!provider) {
+        const href = walletHelpUrl(wallet);
+        if (href) setHelpLink({ href, label: t(`auth.install.${wallet}`) });
+        throw new Error(t(`auth.error.missing.${wallet}`));
       }
 
       const accounts = await provider.request({ method: "eth_requestAccounts" });
@@ -131,19 +174,10 @@ export default function AuthGate({ children }) {
       const nonceData = await nonceRes.json().catch(() => null);
       if (!nonceRes.ok) throw new Error(nonceData?.error || t("auth.error.challenge"));
 
-      let signature;
-      try {
-        signature = await provider.request({
-          method: "personal_sign",
-          params: [nonceData.message, address],
-        });
-      } catch (err) {
-        if (err?.code === 4001) throw err;
-        signature = await provider.request({
-          method: "personal_sign",
-          params: [address, nonceData.message],
-        });
-      }
+      const signature = await provider.request({
+        method: "personal_sign",
+        params: [toHexMessage(nonceData.message), address],
+      });
 
       const verifyRes = await fetch("/api/auth/wallet/verify", {
         method: "POST",
@@ -154,6 +188,7 @@ export default function AuthGate({ children }) {
       if (!verifyRes.ok) throw new Error(verifyData?.error || t("auth.error.verify"));
       setUser(verifyData.user);
     } catch (err) {
+      /* 4001 is EIP-1193's "user rejected" — the same code in both wallets. */
       setError(err?.code === 4001 ? t("auth.error.cancelled") : err.message);
     } finally {
       setBusy("");
@@ -193,10 +228,9 @@ export default function AuthGate({ children }) {
     );
   }
 
-  if (user || guest) {
-    const authUser = user || { provider: "guest", name: t("auth.guestUser") };
+  if (user) {
     return (
-      <AuthContext.Provider value={{ user: authUser, logout: () => { if(guest) setGuest(false); else logout(); }, busy }}>
+      <AuthContext.Provider value={{ user, logout, busy }}>
         {children}
       </AuthContext.Provider>
     );
@@ -225,12 +259,24 @@ export default function AuthGate({ children }) {
 
             <div className="auth-divider">{t("auth.or")}</div>
 
-            <button className="auth-wallet-btn" onClick={loginWallet} disabled={Boolean(busy)}>
-              <span>{busy === "wallet" ? t("auth.waitingSignature") : t("auth.metamask")}</span>
+            <button
+              className="auth-wallet-btn"
+              onClick={() => loginWallet("metamask")}
+              disabled={Boolean(busy)}
+            >
+              <span>{busy === "metamask" ? t("auth.waitingSignature") : t("auth.metamask")}</span>
             </button>
 
-            <button className="auth-guest-btn" onClick={() => setGuest(true)}>
-              {t("auth.guest")}
+            <button
+              className="auth-wallet-btn"
+              onClick={() => loginWallet("phantom")}
+              disabled={Boolean(busy)}
+            >
+              <span>{busy === "phantom" ? t("auth.waitingSignature") : t("auth.phantom")}</span>
+            </button>
+
+            <button className="auth-guest-btn" onClick={loginGuest} disabled={Boolean(busy)}>
+              {busy === "guest" ? t("auth.guestStarting") : t("auth.guest")}
             </button>
 
             <div className="auth-disclaimer">
@@ -239,7 +285,16 @@ export default function AuthGate({ children }) {
               })}
             </div>
 
-            {error ? <div className="auth-error" style={{marginTop: 8}}>{error}</div> : null}
+            {error ? (
+              <div className="auth-error" style={{marginTop: 8}}>
+                {error}
+                {helpLink ? (
+                  <a href={helpLink.href} target="_blank" rel="noopener noreferrer">
+                    {helpLink.label}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

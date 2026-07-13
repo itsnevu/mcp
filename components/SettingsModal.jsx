@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/I18nContext";
+import { APP_NAME } from "@/lib/chatContract";
+import { useAuth } from "./AuthGate";
 
 const icon = {
   viewBox: "0 0 24 24",
@@ -14,8 +16,6 @@ const icon = {
   strokeLinejoin: "round",
 };
 
-/* Only "general" is implemented; the rest exist to mirror the shape of the full
-   product and render the Coming Soon panel. */
 const TAB_GROUPS = [
   {
     id: "settings",
@@ -45,9 +45,44 @@ const TAB_GROUPS = [
 const STATUS_KEY = {
   live: "settings.status.live",
   ready: "settings.status.ready",
+  degraded: "settings.status.degraded",
   offline: "settings.status.offline",
-  demo: "settings.status.demo",
 };
+
+const CONNECTORS = [
+  ["RobinX MCP", "Core chain intelligence tools"],
+  ["Boar basic", "Robinhood Chain market and token data"],
+  ["Boar advanced", "Deeper contract and holder analysis"],
+  ["Boo Crypto", "Crypto research tools"],
+  ["DexScreener", "Market pairs and liquidity"],
+  ["Fuse", "Cross-chain supporting data"],
+  ["Whale Intel", "Premium whale intelligence, requires WHALE_INTEL_KEY"],
+  ["Etherscan", "EVM explorer tools, requires ETHERSCAN_API_KEY"],
+  ["Hood Domains", ".hood name resolution"],
+];
+
+function Stat({ label, value, note }) {
+  return (
+    <div className="settings-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {note ? <small>{note}</small> : null}
+    </div>
+  );
+}
+
+function Bar({ value, max }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="settings-meter" aria-hidden="true">
+      <span style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+function CodeLine({ children }) {
+  return <code className="settings-code-line">{children}</code>;
+}
 
 export default function SettingsModal({
   open,
@@ -59,8 +94,13 @@ export default function SettingsModal({
   onThemeChange,
 }) {
   const { t, activeLang, setActiveLang, languages } = useI18n();
+  const auth = useAuth();
   const [activeTab, setActiveTab] = useState("general");
   const [url, setUrl] = useState("");
+  const [usage, setUsage] = useState(null);
+  const [health, setHealth] = useState(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+  const [probing, setProbing] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -71,9 +111,209 @@ export default function SettingsModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoadingUsage(true);
+    fetch("/api/usage", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setUsage(data?.ok ? data : null);
+      })
+      .catch(() => {
+        if (!cancelled) setUsage(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingUsage(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const activeLabel = TAB_GROUPS.flatMap((g) => g.tabs).find((tab) => tab.id === activeTab)?.labelKey;
+  const user = auth?.user;
+  const quota = usage?.usage;
+  const backend = url.trim().replace(/\/+$/, "");
+  const probeHealth = async () => {
+    setProbing(true);
+    try {
+      const res = await fetch(`${backend}/api/health?probe=1`, { cache: "no-store" });
+      setHealth(await res.json().catch(() => null));
+    } catch {
+      setHealth(null);
+    } finally {
+      setProbing(false);
+    }
+  };
+
+  const panel = {
+    account: (
+      <>
+        <div className="settings-content-sub">Signed-in identity and session controls for this browser.</div>
+        <div className="settings-grid">
+          <Stat label="Provider" value={user?.provider || "unknown"} />
+          <Stat label="Name" value={user?.name || user?.email || user?.address || "Guest"} />
+          <Stat label="Email" value={user?.email || "Not connected"} />
+          <Stat label="Wallet" value={user?.address || "Not connected"} />
+        </div>
+        <div className="settings-group">
+          <div className="settings-group-label">Session</div>
+          <div className="settings-group-content">
+            <p className="settings-copy">
+              Guest sessions last 24 hours and are metered by source IP. Google and wallet sessions last 7 days
+              and receive the signed-in quota tier.
+            </p>
+            <div className="settings-actions">
+              <button className="btn ghost" onClick={auth?.logout} disabled={auth?.busy === "logout"}>
+                {auth?.busy === "logout" ? t("menu.loggingOut") : t("menu.logout")}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    ),
+    privacy: (
+      <>
+        <div className="settings-content-sub">Privacy controls that are active in this build.</div>
+        <div className="settings-list">
+          <div>
+            <strong>Incognito chats</strong>
+            <span>Kept in memory only, excluded from localStorage, and sent to the backend with an incognito flag.</span>
+          </div>
+          <div>
+            <strong>Attachments</strong>
+            <span>Images are downscaled before upload; PDFs are converted to text in the browser when possible.</span>
+          </div>
+          <div>
+            <strong>Model storage</strong>
+            <span>Live engine requests are sent with storage disabled. The app does not train models on chat history.</span>
+          </div>
+        </div>
+        <div className="settings-group">
+          <div className="settings-group-label">{t("settings.data")}</div>
+          <div className="settings-group-content">
+            <p className="settings-copy">This deletes saved non-incognito chats from this browser. Server-side quota counters are not reset.</p>
+            <div className="settings-actions">
+              <button className="btn danger" onClick={onClearChats}>{t("settings.clearChats")}</button>
+            </div>
+          </div>
+        </div>
+      </>
+    ),
+    billing: (
+      <>
+        <div className="settings-content-sub">Usage is metered before every live engine call, so the bill has a hard daily ceiling.</div>
+        {loadingUsage ? (
+          <div className="settings-empty"><h3>Loading usage…</h3></div>
+        ) : quota ? (
+          <>
+            <div className="settings-grid">
+              <Stat label="Tier" value={quota.guest ? "Guest" : "Signed in"} />
+              <Stat label="Requests today" value={`${quota.user.requestsToday} / ${quota.user.requestsPerDay}`} />
+              <Stat label="User spend today" value={`$${quota.user.spentUsdToday} / $${quota.user.capUsdToday}`} />
+              <Stat label="Global spend today" value={`$${quota.global.spentUsdToday} / $${quota.global.capUsdToday}`} />
+            </div>
+            <Bar value={quota.user.spentUsdToday} max={quota.user.capUsdToday} />
+            <p className="settings-copy">
+              No subscription or card flow is wired in this build. Paid tool access is controlled by server wallet
+              configuration, and guest limits lift when the user signs in.
+            </p>
+          </>
+        ) : (
+          <div className="settings-empty"><h3>Usage unavailable</h3><p>Sign in again to refresh quota data.</p></div>
+        )}
+      </>
+    ),
+    capabilities: (
+      <>
+        <div className="settings-content-sub">Live engine, MCP fleet, price feed, voice, files, and wallet auth readiness.</div>
+        <div className="settings-grid">
+          <Stat label="Chat backend" value={t(backendStatus?.labelKey || "status.offline")} />
+          <Stat label="Voice" value={"Browser speech API"} />
+          <Stat label="Files" value={"Images, PDFs, text"} />
+          <Stat label="Wallets" value={"MetaMask, Phantom"} />
+        </div>
+        <div className="settings-actions">
+          <button className="btn ghost" onClick={probeHealth} disabled={probing}>
+            {probing ? "Probing…" : "Probe MCP health"}
+          </button>
+        </div>
+        {health ? (
+          <div className="settings-list">
+            <div><strong>Engine</strong><span>{String(Boolean(health.capabilities?.engine))}</span></div>
+            <div><strong>MCP</strong><span>{health.capabilities?.mcp || "unknown"} · {health.capabilities?.mcpTools || 0} tools</span></div>
+            <div><strong>Paid tools</strong><span>{health.capabilities?.paidToolsEnabled ? "Enabled" : "Disabled"}</span></div>
+          </div>
+        ) : null}
+      </>
+    ),
+    reflect: (
+      <>
+        <div className="settings-content-sub">Operational notes for reviewing answers instead of trusting them blindly.</div>
+        <div className="settings-list">
+          <div><strong>Source badge</strong><span>Live data, tools offline, and backend offline are separated.</span></div>
+          <div><strong>Widget validation</strong><span>Malformed backend replies are rejected before rendering.</span></div>
+          <div><strong>Financial safety</strong><span>State-changing MCP tools are filtered unless explicitly allowlisted server-side.</span></div>
+        </div>
+      </>
+    ),
+    time: (
+      <>
+        <div className="settings-content-sub">Latency and focus controls currently enforced by the app.</div>
+        <div className="settings-grid">
+          <Stat label="Client timeout" value="90s" />
+          <Stat label="Server hard deadline" value="45s default" />
+          <Stat label="Fast mode" value="2 iterations" />
+          <Stat label="Deep mode" value="6 iterations" />
+        </div>
+        <p className="settings-copy">Use Fast for lightweight lookups and Deep when the answer needs multiple MCP tool passes.</p>
+      </>
+    ),
+    code: (
+      <>
+        <div className="settings-content-sub">API surface exposed by this deployment.</div>
+        <div className="settings-code">
+          <CodeLine>POST /api/chat</CodeLine>
+          <CodeLine>GET /api/health?probe=1</CodeLine>
+          <CodeLine>GET /api/prices</CodeLine>
+          <CodeLine>GET /api/usage</CodeLine>
+        </div>
+        <p className="settings-copy">The reply contract is documented on the Docs page; invalid shapes never reach the chat renderer.</p>
+      </>
+    ),
+    skills: (
+      <>
+        <div className="settings-content-sub">Built-in skills available to the agent surface.</div>
+        <div className="settings-list">
+          <div><strong>Rug check</strong><span>Contract, liquidity, deployer and holder risk.</span></div>
+          <div><strong>Market scan</strong><span>Trending, price, liquidity and social signal.</span></div>
+          <div><strong>Wallet analysis</strong><span>Wallet flags, stats and exposure summaries.</span></div>
+        </div>
+      </>
+    ),
+    connectors: (
+      <>
+        <div className="settings-content-sub">MCP connectors configured in mcp.json. Availability depends on remote health and env keys.</div>
+        <div className="settings-list">
+          {CONNECTORS.map(([name, desc]) => (
+            <div key={name}><strong>{name}</strong><span>{desc}</span></div>
+          ))}
+        </div>
+      </>
+    ),
+    plugins: (
+      <>
+        <div className="settings-content-sub">Extension policy for this build.</div>
+        <div className="settings-list">
+          <div><strong>No user-installed plugins yet</strong><span>The production app only loads server-owned MCP entries from mcp.json.</span></div>
+          <div><strong>Allowlist enforced</strong><span>Mutating tools are stripped unless a connector explicitly opts in server-side.</span></div>
+        </div>
+      </>
+    ),
+  };
 
   return (
     <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -167,7 +407,7 @@ export default function SettingsModal({
                   />
                   <div className="settings-status">
                     <b>{t("settings.statusPrefix")}</b>
-                    <span>{t(STATUS_KEY[backendStatus?.kind] || STATUS_KEY.demo)}</span>
+                    <span>{t(STATUS_KEY[backendStatus?.kind] || STATUS_KEY.offline)}</span>
                   </div>
                   <div className="settings-actions">
                     <button className="btn primary" onClick={() => onSaveTest(url.trim().replace(/\/+$/, ""))}>
@@ -191,14 +431,10 @@ export default function SettingsModal({
                 </div>
               </div>
             </>
-          ) : (
+          ) : panel[activeTab] || (
             <div className="settings-empty">
-              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 8 12 12 14 14" />
-              </svg>
-              <h3>{t("settings.comingSoon")}</h3>
-              <p>{t("settings.comingSoonDesc")}</p>
+              <h3>{APP_NAME}</h3>
+              <p>This panel has no runtime data yet.</p>
             </div>
           )}
         </main>

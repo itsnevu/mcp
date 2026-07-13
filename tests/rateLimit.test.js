@@ -5,6 +5,7 @@ import {
   usageToUsd,
   budgetSnapshot,
   clientIpFrom,
+  usageSnapshot,
 } from "@/lib/rateLimit";
 
 const ENV = [
@@ -142,6 +143,18 @@ describe("spend guard", () => {
     // A quoted cost always wins over the estimate.
     expect(usageToUsd({ prompt_tokens: 1e6, completion_tokens: 1e6, cost: 0.5 })).toBe(0.5);
     expect(usageToUsd(null)).toBe(0);
+  });
+
+  it("exposes a scoped usage snapshot for the signed-in user", () => {
+    configure({ ...LOOSE, ENGINE_USER_USD_PER_DAY: 0.1, ENGINE_GLOBAL_USD_PER_DAY: 1 });
+    const claim = acquire({ userKey: "usage-user", ipKey: freshIp() }, 0.04);
+    expect(claim.ok).toBe(true);
+    claim.release();
+
+    const snapshot = usageSnapshot({ userKey: "usage-user", ipKey: freshIp() });
+    expect(snapshot.user.spentUsdToday).toBeCloseTo(0.04, 5);
+    expect(snapshot.user.capUsdToday).toBe(0.1);
+    expect(snapshot.global.capUsdToday).toBe(1);
   });
 
   it("estimates a Deep run as costing more than a Fast one", () => {

@@ -3,7 +3,7 @@ import JsonLd from "@/components/JsonLd";
 import { pageMetadata, breadcrumbLd, faqPageLd, webPageLd } from "@/lib/seo";
 
 const TITLE = "Frequently Asked Questions";
-const DESCRIPTION = `Answers about ${APP_NAME}: what it is, where its on-chain data comes from, how Incognito Mode and wallet login protect you, how accurate the analysis is, and what to do when you see DEMO DATA.`;
+const DESCRIPTION = `Answers about ${APP_NAME}: what it is, where its on-chain data comes from, how Incognito Mode and wallet login protect you, how accurate the analysis is, and what happens when the live engine is unavailable.`;
 
 export const metadata = pageMetadata({
   title: TITLE,
@@ -17,7 +17,7 @@ export const metadata = pageMetadata({
     "AI agent",
     "incognito mode",
     "wallet login safety",
-    "demo data",
+    "live engine unavailable",
     "slash commands",
     "rug check accuracy",
     `${CHAIN_NAME} AI`,
@@ -91,8 +91,8 @@ const faqSections = [
     heading: "4. Troubleshooting & Settings",
     items: [
       {
-        question: 'Why is my data showing as "DEMO DATA"?',
-        answer: `<p>If you see a "DEMO DATA" badge on the UI widgets, it means the application is currently running in Demo Mode. This occurs when the backend server is not configured with live API credentials (like the RobinX engine API key, or the RobinX MCP API keys). In this state, the app will return illustrative, mock data to demonstrate the UI capabilities without incurring live API costs. If you are running the app locally, check the developer documentation to learn how to configure your <code>.env</code> file.</p>`,
+        question: "Why does the app say the engine is unavailable?",
+        answer: `<p>The chat endpoint only answers when the live RobinX engine is configured and reachable. If credentials are missing, the engine is down, or the request times out, the app returns an unavailable state instead of fabricated market data. If you are running the app locally, check the developer documentation to configure your <code>.env</code> file.</p>`,
       },
       {
         question: "How do I change the language or UI theme?",

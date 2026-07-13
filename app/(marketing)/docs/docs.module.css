@@ -160,7 +160,7 @@
   flex: none;
 }
 
-.dotDemo {
+.dotNeutral {
   composes: dot;
   background: var(--warn);
 }

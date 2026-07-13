@@ -27,7 +27,7 @@ const CAPABILITIES = [
     status: "live",
     prompt: "Is 0x7f3a…c9d2 safe to ape?",
     title: "Rug-check anything with an address",
-    body: "The agent pulls the contract source, the liquidity lock, the holder concentration, and the honeypot behaviour from four independent tools, then tells you where they disagree. A clean verdict from one source is worthless. A clean verdict from four that were checked against each other is a position.",
+    body: "The agent checks the Robinhood Chain contract directly, reads ownership and proxy state, inspects privileged powers, checks DEX liquidity, and states exactly which checks are still unmeasured. A clean answer that hides unknowns is not clean.",
   },
   {
     status: "live",
@@ -45,7 +45,7 @@ const CAPABILITIES = [
     status: "live",
     prompt: "Is the hype on X matched by real on-chain volume?",
     title: "Social signal vs. chain truth",
-    body: "The agent reads the timeline and the ledger in the same breath and reports the delta. When 300% more people are talking and 0% more money is moving, that gap is the entire trade.",
+    body: "The agent reads the timeline and the ledger in the same breath and reports whether attention is backed by liquidity and volume, or whether the conversation is running ahead of the chain.",
   },
   {
     status: "live",
@@ -55,9 +55,9 @@ const CAPABILITIES = [
   },
   {
     status: "building",
-    prompt: "These 40 holders look organic. Are they?",
+    prompt: "Do these holders look organic?",
     title: "Holder clustering by funding path",
-    body: "The agent walks every holder's wallet backwards to the address that funded it. Forty independent buyers who all took their gas from the same wallet six minutes before launch are not forty buyers. They're one, wearing forty hats.",
+    body: "The agent walks holder wallets backwards to the addresses that funded them, then reports clusters as clusters instead of pretending every wallet is an independent buyer.",
   },
   {
     status: "building",
@@ -91,13 +91,13 @@ const CAPABILITIES = [
   },
   {
     status: "planned",
-    prompt: "Launch MYTOKEN, 1B supply, LP locked 12 months, ownership renounced.",
+    prompt: "Launch a token with the supply, pool, lock, and ownership policy I specify.",
     title: "Deploy a token from one sentence",
     body: "The agent assembles the deploy, the pool, the lock, and the renounce into one reviewable bundle with verified source, shows you the simulation, and hands it to your wallet to sign. It never holds a key — it proposes, you sign. Launching honestly should not require trusting a launchpad with your contract.",
   },
   {
     status: "planned",
-    prompt: "Swap 2 HOOD into this, but not if price impact clears 3%.",
+    prompt: "Quote this swap, but do not proceed if the impact is above my limit.",
     title: "Quote, simulate, then trade",
     body: "Research and execution in one loop instead of two tabs. The agent routes the swap, states the impact, dry-runs it against live chain state, and shows you exactly what leaves your wallet before anything is signed. The order never fires on its own.",
   },
@@ -123,7 +123,7 @@ const CAPABILITIES = [
     status: "planned",
     prompt: "Be honest about my bags.",
     title: "Portfolio X-ray",
-    body: "Read-only. Connect a wallet and get told the thing your PnL screen won't: that 70% of your book traces back to one deployer, and your four 'uncorrelated' positions are the same bet wearing different tickers.",
+    body: "Read-only. Connect a wallet and get the context your PnL screen will not show: shared deployers, shared funding paths, outstanding approvals, and positions that are more correlated than their tickers make them look.",
   },
   {
     status: "planned",
@@ -133,13 +133,13 @@ const CAPABILITIES = [
   },
   {
     status: "research",
-    prompt: "Sell half if it 2x. Dump it all if liquidity drops under $100k.",
+    prompt: "Sell part of the position if my target hits. Exit if liquidity drops below my limit.",
     title: "Intents, not orders",
     body: "You state the outcome. It compiles to an on-chain intent that settles without you awake, without you trusting us to stay online, and without a centralised bot holding your keys.",
   },
   {
     status: "research",
-    prompt: "You may trade. You may not lose more than $200.",
+    prompt: "You may trade, but only inside the spend limit I set.",
     title: "Execution behind a hard ceiling",
     body: "The honest problem with an agent that can spend money is that the worst case is your whole wallet. So the worst case has to be enforced somewhere the agent cannot argue with — a spend-cap vault, on-chain, where the limit is a number you set and the agent physically cannot exceed it. This is the one capability on this page that genuinely requires a contract we'd have to write and get audited. We won't ship it until that's true.",
   },

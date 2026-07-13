@@ -9,9 +9,11 @@ import TickerTape from "./TickerTape";
 import InputBar from "./InputBar";
 import ChatView from "./ChatView";
 import SettingsModal from "./SettingsModal";
-import { demoAgent } from "@/lib/demoAgent";
+import VoiceMode from "./VoiceMode";
+/* The browser has no business inventing an answer when the backend does not give it one. */
 import { replyToText, isValidReply } from "@/lib/text";
 import { APP_NAME, CHAIN_NAME, isValidChatResponse } from "@/lib/chatContract";
+import { intakeFiles, toStoredAttachments, toWireAttachments } from "@/lib/fileIntake";
 import { useAuth } from "./AuthGate";
 import { useI18n } from "@/lib/I18nContext";
 
@@ -52,14 +54,17 @@ export default function HoodScopeApp() {
   const [isIncognito, setIsIncognito] = useState(false);
   /* Store the status KIND, not a rendered label — the label is looked up at
      render time so it re-translates when the language changes. `labelKey` is
-     separate from `kind` because the demo-fallback state reads "Demo fallback"
-     while still being an offline kind. */
-  const [backendStatus, setBackendStatus] = useState({ kind: "demo", labelKey: "status.demo" });
+     separate from `kind` because the rendered copy is translated at display time. */
+  const [backendStatus, setBackendStatus] = useState({ kind: "offline", labelKey: "status.offline" });
   const [toastMsg, setToastMsg] = useState("");
   const [toastShow, setToastShow] = useState(false);
   const [mode, setModeState] = useState("Auto");
   const [theme, setTheme] = useState("dark");
-  const [guestPromptCount, setGuestPromptCount] = useState(0);
+  /* Attachments are staged here, NOT in the draft: they survive a cleared input, they are
+     cleared by a send, and the full-size image data never enters chat history (see
+     toStoredAttachments — a data URL per message would blow the localStorage quota). */
+  const [attachments, setAttachments] = useState([]);
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const auth = useAuth();
   const { t, tRich } = useI18n();
@@ -98,8 +103,6 @@ export default function HoodScopeApp() {
       setTheme(savedTheme);
       localStorage.setItem("hoodscope.theme", savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
-      const g = parseInt(localStorage.getItem("hoodscope.guest_prompts") || "0", 10);
-      setGuestPromptCount(isNaN(g) ? 0 : g);
     } catch {}
     if (window.innerWidth <= 780) setCollapsed(true); // don't cover mobile screens by default
     setHydrated(true);
@@ -145,7 +148,7 @@ export default function HoodScopeApp() {
       if (data?.mode === "live-ready") {
         setBackendStatus({ kind: "ready", labelKey: "status.ready" });
       } else {
-        setBackendStatus({ kind: "demo", labelKey: "status.demo" });
+        setBackendStatus({ kind: "offline", labelKey: "status.offline" });
       }
       return true;
     } catch {
@@ -256,21 +259,20 @@ export default function HoodScopeApp() {
   const send = useCallback(
     async (rawText) => {
       const text = String(rawText || "").trim();
-      if (!text || busyRef.current) return;
-      
-      const isGuest = auth?.user?.provider === 'guest';
+      const files = attachments;
+      /* A file with no prose is a complete request ("read this"), so an empty box is only
+         empty when nothing is attached to it either. */
+      if ((!text && !files.length) || busyRef.current) return null;
 
-      if (isGuest && guestPromptCount >= 3) {
-        showToast(t("toast.guestLimit"));
-        setTimeout(() => auth.logout(), 2500); // Kick back to auth
-        return;
-      }
-      
-      if (isGuest) {
-        const newCount = guestPromptCount + 1;
-        setGuestPromptCount(newCount);
-        try { localStorage.setItem("hoodscope.guest_prompts", newCount.toString()); } catch {}
-      }
+      /* Guests now hold a real signed session (POST /api/auth/guest) and are answered by the
+         live engine like anyone else — attachments included. Their quota is enforced SERVER
+         side, keyed on IP (lib/rateLimit.js, guest tier), and the server says when they are
+         done by returning 429 { guestLimit: true }.
+
+         What used to be here: a localStorage counter that kicked them out after 3 turns, and
+         — far worse — a short-circuit below that answered them in the browser instead of ever
+         calling the backend. A counter in localStorage is not a quota anyway; clearing site data
+         reset it. The server is the only thing that can say no. */
 
       busyRef.current = true;
       setBusy(true);
@@ -279,13 +281,25 @@ export default function HoodScopeApp() {
       const myTok = ++seqRef.current;
 
       const now = Date.now();
-      const userMsg = { id: "m" + now + "u", role: "user", content: text, ts: now };
+      const userMsg = {
+        id: "m" + now + "u",
+        role: "user",
+        content: text,
+        ts: now,
+        ...(files.length ? { attachments: toStoredAttachments(files) } : {}),
+      };
+      const titleSource = text || files[0]?.name || "";
       let id = activeId;
       let prevMessages = [];
       if (!id) {
         id = "c" + now.toString(36) + Math.random().toString(36).slice(2, 6);
         setChats((prev) => [
-          { id, title: text.length > 26 ? text.slice(0, 26) + "…" : text, messages: [userMsg], incognito: isIncognito },
+          {
+            id,
+            title: titleSource.length > 26 ? titleSource.slice(0, 26) + "…" : titleSource,
+            messages: [userMsg],
+            incognito: isIncognito,
+          },
           ...prev,
         ]);
         setActiveId(id);
@@ -296,42 +310,60 @@ export default function HoodScopeApp() {
         );
       }
       setDraft("");
+      setAttachments([]); // consumed by this turn; they are not re-sent on the next one
       setAwaiting(true);
 
       let reply = null;
       try {
         const history = prevMessages.slice(-11).map((m) => ({
           role: m.role === "user" ? "user" : "assistant",
-          text: m.role === "user" ? m.content : replyToText(m.content),
+          /* An earlier turn's files are NOT replayed — only the fact that they existed. Re-
+             sending a 6000-character CSV on every subsequent question would re-bill it every
+             time, and the model has already read it once. */
+          text:
+            m.role === "user"
+              ? m.content ||
+                (m.attachments?.length ? `[attached: ${m.attachments.map((a) => a.name).join(", ")}]` : "")
+              : replyToText(m.content),
         }));
 
         const ctrl = new AbortController();
         fetchCtrlRef.current = ctrl;
         /* Must outlast the server's own deadline, not undercut it. A live answer is an
            agentic loop — several model turns with MCP tool calls between them — and a
-           tool-using question routinely runs past 20s. Giving up first threw away a reply
-           the backend was still paying for, and showed demo data instead. */
+           tool-using question routinely runs past 20s. Giving up first throws away a reply
+           the backend is still paying for. */
         const timer = setTimeout(() => ctrl.abort(), 90000); // hung backend can't wedge the UI
         let gotLive = false;
         let authRequired = false;
         let serverBusy = false;
+        let guestLimit = false;
         try {
-          // Guests have no server session; /api/chat would 401. Answer locally instead.
-          if (isGuest) throw new Error("guest");
           const res = await fetch(backendBase() + "/api/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, mode, history }),
+            headers: {
+              "Content-Type": "application/json",
+              ...(currentIncognito ? { "X-Bugglo-Incognito": "1" } : {}),
+            },
+            body: JSON.stringify({
+              message: text,
+              mode,
+              history,
+              attachments: toWireAttachments(files),
+              incognito: currentIncognito,
+            }),
             signal: ctrl.signal,
           });
           if (res.status === 401) {
             authRequired = true;
             throw new Error("authentication required");
           }
-          /* Over a cap. This must NOT fall through to the demo agent: the user asked a real
-             question about real money, and answering it with placeholder numbers they did
+          /* Over a cap. This must NOT synthesize an answer: the user asked a real
+             question about real money, and answering it with made-up numbers they did
              not ask for is worse than telling them to come back in a minute. */
           if (res.status === 429) {
+            const data = await res.json().catch(() => null);
+            guestLimit = Boolean(data?.guestLimit);
             serverBusy = true;
             throw new Error("server busy");
           }
@@ -340,15 +372,22 @@ export default function HoodScopeApp() {
             if (isValidChatResponse(data)) {
               reply = data.reply;
               gotLive = true;
+              /* Three states, and the difference between them matters to someone about to
+                 spend money. "live" = the engine answered with its chain tools. "degraded" =
+                 the engine answered, but its tools were down, so nothing in it is chain-
+                 verified. Collapsing those two into one green badge is how an unverified
+                 claim gets read as a verified one. */
               setBackendStatus(
-                data.source === "live"
-                  ? { kind: "live", labelKey: "status.live" }
-                  : { kind: "demo", labelKey: "status.demo" }
+                data.source !== "live"
+                  ? { kind: "offline", labelKey: "status.offline" }
+                  : data.degraded
+                    ? { kind: "degraded", labelKey: "status.degraded" }
+                    : { kind: "live", labelKey: "status.live" }
               );
             } else if (data && isValidReply(data.reply)) {
               reply = data.reply;
               gotLive = true;
-              setBackendStatus({ kind: "demo", labelKey: "status.demo" });
+              setBackendStatus({ kind: "offline", labelKey: "status.offline" });
             }
           }
         } catch {
@@ -361,17 +400,26 @@ export default function HoodScopeApp() {
         if (!gotLive) {
           if (stoppedByUserRef.current) {
             reply = null; // user hit stop while the request was in flight
-          } else if (authRequired && !isGuest) {
+          } else if (authRequired) {
+            /* A guest holds a real 24h cookie now, so a guest session can expire like any
+               other. Reload back to the auth screen instead of quietly answering them from a
+               script — which is exactly what the old `&& !isGuest` guard caused. */
             showToast(t("toast.sessionExpired"));
             setTimeout(() => window.location.reload(), 800);
             reply = null;
+          } else if (guestLimit) {
+            setBackendStatus({ kind: "offline", labelKey: "status.offline" });
+            reply = { kind: "text", text: t("chat.guestLimit") };
           } else if (serverBusy) {
-            setBackendStatus({ kind: "offline", labelKey: "status.fallback" });
+            setBackendStatus({ kind: "offline", labelKey: "status.offline" });
             reply = { kind: "text", text: t("chat.serverBusy") };
           } else {
-            setBackendStatus({ kind: "offline", labelKey: "status.fallback" });
-            await new Promise((r) => setTimeout(r, 500));
-            reply = demoAgent(text);
+            /* The backend did not answer. We say so.
+               An outage that looks like an answer is worse than an outage that looks like an
+               outage, because nobody reports it and someone trades on it. Never synthesize an
+               answer here. */
+            setBackendStatus({ kind: "offline", labelKey: "status.offline" });
+            reply = { kind: "text", text: t("chat.unavailable") };
           }
         }
       } finally {
@@ -383,7 +431,7 @@ export default function HoodScopeApp() {
           busyRef.current = false;
           setBusy(false);
         }
-        return;
+        return null;
       }
 
       const rts = Date.now();
@@ -396,10 +444,50 @@ export default function HoodScopeApp() {
       // If superseded (user navigated / started a new send), a newer owner
       // controls busy state; the reply is saved and renders when viewed.
       // Otherwise busy is released by onTypingDone when the typewriter ends.
-      if (!stillCurrent) return;
+
+      /* Returned, not just rendered: voice mode has to speak this, and it cannot read it back
+         out of chat state without racing the typewriter. null means "nothing was said" —
+         stopped, rate-limited, or refused — and the caller must not narrate that. */
+      return reply;
     },
-    [activeId, mode, showToast, auth, guestPromptCount, isIncognito, t]
+    [activeId, mode, showToast, isIncognito, currentIncognito, t, attachments]
   );
+
+  /* ── attachments ── */
+
+  const onAttachFiles = useCallback(
+    async (files) => {
+      const { attachments: added, errors } = await intakeFiles(files, { existingCount: attachments.length });
+      if (added.length) setAttachments((prev) => [...prev, ...added]);
+      /* One toast, for the first thing that went wrong. A stack of five toasts for five
+         rejected files is noise nobody reads. */
+      if (errors.length) showToast(t(`attach.err.${errors[0].reason}`, { name: errors[0].name }));
+    },
+    [attachments.length, showToast, t]
+  );
+
+  const onRemoveAttachment = useCallback((id) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  /* ── voice mode ── */
+
+  /* The typewriter is a nice touch when you are reading; when you are LISTENING it is just a
+     delay that holds `busy` high and blocks the next turn. Skip straight to the finished
+     message so the answer can be spoken the moment it lands. */
+  const voiceSend = useCallback(
+    async (text) => {
+      const reply = await send(text);
+      abortTypingRef.current = true;
+      return reply;
+    },
+    [send]
+  );
+
+  const closeVoice = useCallback(() => {
+    setVoiceOpen(false);
+    inputRef.current?.focus();
+  }, []);
 
   const onSuggest = useCallback(
     (q) => {
@@ -426,6 +514,12 @@ export default function HoodScopeApp() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "Comma") {
         e.preventDefault();
         setSettingsOpen(true);
+      }
+      /* Hands-free from the keyboard. Keyed on e.code because ⇧V is "V" on a US layout and
+         something else entirely on others. */
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "KeyV") {
+        e.preventDefault();
+        setVoiceOpen(true);
       }
       if (e.key === "Escape") setSettingsOpen(false);
     };
@@ -456,6 +550,10 @@ export default function HoodScopeApp() {
       inputRef={inputRef}
       showToast={showToast}
       isIncognito={isIncognito}
+      attachments={attachments}
+      onAttachFiles={onAttachFiles}
+      onRemoveAttachment={onRemoveAttachment}
+      onOpenVoice={() => setVoiceOpen(true)}
     />
   );
 
@@ -628,6 +726,7 @@ export default function HoodScopeApp() {
         theme={theme}
         onThemeChange={applyTheme}
       />
+      <VoiceMode open={voiceOpen} onClose={closeVoice} onSend={voiceSend} showToast={showToast} />
       <div className={"toast" + (toastShow ? " show" : "")}>{toastMsg}</div>
     </>
   );

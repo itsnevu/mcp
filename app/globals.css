@@ -187,11 +187,14 @@ button, input, textarea, select { font-family: inherit; }
   flex-direction: column;
   gap: 16px;
 }
+/* #8e918f and rgba(255,255,255,.08) are the stroke and hover layer Google's own dark button
+   ships with. These two used #747775 — Google's *light*-theme stroke — which is why they
+   never quite matched the Google button sitting above them. */
 .auth-wallet-btn {
   width: 100%;
   height: 40px;
   border-radius: 4px;
-  border: 1px solid #747775;
+  border: 1px solid #8e918f;
   background: #131314;
   color: #e3e3e3;
   font-size: 15px;
@@ -203,14 +206,14 @@ button, input, textarea, select { font-family: inherit; }
   gap: 10px;
   transition: background 0.2s;
 }
-.auth-wallet-btn:hover { background: rgba(255,255,255,0.05); }
+.auth-wallet-btn:hover { background: rgba(255,255,255,0.08); }
 .auth-wallet-btn:disabled { opacity: 0.5; cursor: wait; }
 
 .auth-guest-btn {
   width: 100%;
   height: 40px;
   border-radius: 4px;
-  border: 1px solid #747775;
+  border: 1px solid #8e918f;
   background: #131314;
   color: #e3e3e3;
   font-size: 15px;
@@ -219,7 +222,7 @@ button, input, textarea, select { font-family: inherit; }
   margin-top: 4px;
   transition: background 0.2s;
 }
-.auth-guest-btn:hover { background: rgba(255,255,255,0.05); }
+.auth-guest-btn:hover { background: rgba(255,255,255,0.08); }
 
 .auth-divider {
   display: flex;
@@ -248,18 +251,35 @@ button, input, textarea, select { font-family: inherit; }
 }
 .auth-disclaimer a { color: #999; text-decoration: underline; }
 
+/* GSI renders the button as plain light DOM in here — no iframe and no shadow root, so it is
+   ours to style. (The old rule in this spot targeted an iframe that does not exist, and blamed
+   the page's color-scheme for the white frame. Neither was true: the frame was the button's
+   own "filled_black" theme, and it is fixed at the source in AuthGate.jsx.) */
 .auth-google-wrap {
-  min-height: 44px;
-  display: flex;
-  justify-content: center;
+  width: 100%;
+  min-height: 40px;
 }
-/* Tombol GSI yang dipersonalisasi ("Continue as …") dirender Google di dalam iframe
-   lintas-origin, jadi isinya tak bisa distyle. Kanvas iframe itu mewarisi color-scheme
-   halaman — dan root memakai "dark light", yang membolehkan Chrome mengecatnya putih.
-   Mengunci ke dark di sini membuat latarnya gelap tanpa menyentuh skema halaman. */
-.auth-google-wrap iframe {
-  color-scheme: dark;
-  background: transparent;
+.auth-google-wrap > div,
+.auth-google-wrap > div > div {
+  width: 100%;
+}
+/* role="button" is stable ARIA; GSI's class names are hashed and change under us. !important
+   is needed only for the width pair, because the personalized "Continue as …" variant carries
+   an inline max-width. The colours restate outline_dark's own palette so the button still
+   matches if Google ever falls that theme back to its white default. */
+.auth-panel .auth-google-wrap div[role="button"] {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  height: 40px;
+  border: 1px solid #8e918f;
+  border-radius: 4px;
+  background-color: #131314;
+  color: #e3e3e3;
+}
+.auth-panel .auth-google-wrap div[role="button"]:focus-visible {
+  outline: 2px solid #8e918f;
+  outline-offset: 1px;
 }
 .auth-disabled, .auth-error, .auth-note {
   border: 1px solid rgba(255,255,255,0.1);
@@ -273,6 +293,7 @@ button, input, textarea, select { font-family: inherit; }
   background: var(--red-dim);
   color: var(--red);
 }
+.auth-error a { color: inherit; text-decoration: underline; margin-left: 6px; }
 
 .auth-right {
   flex: 1;
@@ -512,6 +533,17 @@ button, input, textarea, select { font-family: inherit; }
   margin-left: 14px; margin-right: 30px;
   white-space: nowrap;
 }
+/* Feed loading or down. Does NOT scroll: the marquee animation reads as "data is flowing",
+   and there is no data. A still strip is the honest render for an empty one. */
+.ticker-static {
+  display: flex; align-items: center;
+  height: 100%;
+}
+.tick-chip-off {
+  border-style: dashed;
+  text-transform: none; letter-spacing: 0.04em;
+  font-weight: 600;
+}
 
 /* ============ STATUS PILL ============ */
 .status-pill {
@@ -528,7 +560,7 @@ button, input, textarea, select { font-family: inherit; }
 .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
 .status-pill.live .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 .status-pill.ready .dot { background: var(--accent); }
-.status-pill.demo .dot { background: var(--warn); }
+.status-pill.degraded .dot { background: var(--warn); box-shadow: 0 0 8px color-mix(in srgb, var(--warn) 55%, transparent); }
 .status-pill.offline .dot { background: var(--red); }
 
 /* ============ MAIN ============ */
@@ -822,6 +854,8 @@ button, input, textarea, select { font-family: inherit; }
   .settings-sidebar-tab { width: auto; white-space: nowrap; }
   .settings-content { padding: 24px 20px 32px; }
   .settings-group-label, .settings-group-content { flex-basis: 100%; min-width: 0; }
+  .settings-grid,
+  .settings-list > div { grid-template-columns: 1fr; }
 }
 
 .mode-menu {
@@ -1027,13 +1061,6 @@ button, input, textarea, select { font-family: inherit; }
 .widget-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; flex-wrap: wrap; }
 .widget-head > svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
 .widget-title { font-weight: 700; font-size: 14px; flex: 1; }
-.demo-tag {
-  font-size: 10px; font-weight: 800; letter-spacing: 0.07em;
-  color: var(--warn);
-  border: 1px solid var(--warn-border);
-  border-radius: 5px;
-  padding: 2px 6px;
-}
 
 .verdict-pill { font-size: 12px; font-weight: 800; border-radius: 8px; padding: 3px 10px; }
 .verdict-pill.low  { color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent); }
@@ -1175,6 +1202,93 @@ button, input, textarea, select { font-family: inherit; }
 .settings-status b { flex: none; white-space: nowrap; color: var(--text-2); font-weight: 600; }
 .settings-actions { display: flex; justify-content: flex-end; }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.settings-stat {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 12px;
+}
+.settings-stat span,
+.settings-stat small {
+  display: block;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.settings-stat strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.35;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.settings-copy {
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0;
+}
+.settings-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.settings-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.36fr) minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  padding: 12px;
+}
+.settings-list strong {
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.settings-list span {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.settings-meter {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  margin: 4px 0 16px;
+}
+.settings-meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.settings-code {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+.settings-code-line {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 /* Custom Segmented Control */
 .segmented-control {
   display: flex;
@@ -1224,7 +1338,9 @@ button, input, textarea, select { font-family: inherit; }
   border-radius: 12px;
   padding: 11px 18px;
   font-size: 13.5px; font-weight: 600;
-  z-index: 120;
+  /* Above the settings modal AND the voice overlay: a toast that fires while one of them is
+     open (a rejected file, a guest limit) is exactly the one the user needs to see. */
+  z-index: 1300;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
@@ -1665,4 +1781,294 @@ button, input, textarea, select { font-family: inherit; }
 }
 .static-back:hover {
   color: var(--text);
+}
+
+/* ============ ATTACHMENTS ============ */
+.file-input { display: none; }
+
+.attach-btn {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, transform 0.12s;
+}
+.attach-btn svg { width: 19px; height: 19px; }
+.attach-btn:hover { color: var(--text); background: var(--bg-chip); transform: rotate(-12deg); }
+.attach-btn.full { color: var(--accent); }
+
+/* The tray sits above the pill rather than inside it: four chips inside a 36px-tall rounded
+   bar would either overflow it or force it to grow into an unrecognisable shape. */
+.att-tray {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+.att-chip {
+  display: flex; align-items: center; gap: 9px;
+  max-width: 260px;
+  padding: 6px 8px 6px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  animation: attIn 0.18s ease-out;
+}
+@keyframes attIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.att-thumb {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+}
+.att-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.att-icon svg { width: 17px; height: 17px; }
+.att-meta { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.att-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.att-sub { font-size: 11px; color: var(--text-3); }
+.att-remove {
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+  border: none; border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.att-remove svg { width: 11px; height: 11px; }
+.att-remove:hover { background: var(--red-dim); color: var(--red); }
+
+/* ---- drag & drop ---- */
+.input-unit.dragging .input-bar {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.drop-veil {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--bg-input);
+  border: 2px dashed var(--accent);
+  border-radius: 36px;
+  color: var(--accent);
+  font-size: 14.5px; font-weight: 600;
+  pointer-events: none; /* or the veil itself would swallow the drop */
+  z-index: 3;
+}
+.drop-veil svg { width: 20px; height: 20px; }
+
+/* ---- attachments inside a sent message ---- */
+.msg-atts { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 9px; }
+.msg-att-img {
+  width: 116px; height: 116px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: block;
+}
+.msg-att-file {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 220px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--border-soft);
+  font-size: 12.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.msg-att-file svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ============ VOICE BUTTON (opens the session) ============ */
+.voice-btn {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border: none; border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.14s;
+}
+.voice-btn:hover { transform: scale(1.08); }
+.voice-btn:active { transform: scale(0.96); }
+.voice-btn-orb {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, #ffffff 0%, var(--accent) 38%, var(--accent-hover) 70%, #4a5a05 100%);
+  box-shadow: 0 0 0 0 var(--accent-glow), inset 0 -2px 6px rgba(0, 0, 0, 0.35);
+  animation: orbBreathe 3.4s ease-in-out infinite;
+}
+@keyframes orbBreathe {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow), inset 0 -2px 6px rgba(0, 0, 0, 0.35); }
+  50%      { box-shadow: 0 0 0 7px rgba(203, 218, 27, 0), inset 0 -2px 6px rgba(0, 0, 0, 0.35); }
+}
+
+/* ============ VOICE OVERLAY ============ */
+.voice-overlay {
+  position: fixed; inset: 0;
+  z-index: 1200;
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg);
+  /* A wash of the accent behind the orb, so the whole screen belongs to the same light source */
+  background-image:
+    radial-gradient(ellipse 70% 55% at 50% 42%, var(--accent-dim) 0%, transparent 70%);
+  animation: voiceIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes voiceIn {
+  from { opacity: 0; transform: scale(1.03); }
+  to   { opacity: 1; transform: none; }
+}
+
+.voice-top {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px;
+}
+.voice-badge {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-2);
+}
+.voice-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-4);
+  transition: background 0.25s;
+}
+.voice-dot.listening { background: var(--accent); animation: pulse 1.4s infinite; }
+.voice-dot.thinking  { background: var(--warn); animation: pulse 1s infinite; }
+.voice-dot.speaking  { background: var(--accent); }
+.voice-dot.error     { background: var(--red); }
+
+.voice-close {
+  width: 40px; height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s, border-color 0.15s, transform 0.12s;
+}
+.voice-close svg { width: 18px; height: 18px; }
+.voice-close:hover { color: var(--text); border-color: var(--text-3); transform: rotate(90deg); }
+
+.voice-stage {
+  flex: 1;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 0 24px;
+  min-height: 0;
+}
+
+.voice-orb {
+  width: min(46vh, 380px);
+  height: min(46vh, 380px);
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: default;
+  position: relative;
+  transition: transform 0.2s;
+}
+.voice-orb canvas { width: 100%; height: 100%; display: block; }
+.voice-orb.speaking { cursor: pointer; }
+.voice-orb.speaking:hover { transform: scale(0.97); } /* pressing in reads as "stop" */
+.voice-orb:disabled { cursor: default; }
+
+.voice-status {
+  font-size: 17px; font-weight: 600;
+  color: var(--text-2);
+  margin-top: 14px;
+  min-height: 24px;
+}
+.voice-status.error { color: var(--red); }
+.voice-status.thinking { color: var(--warn); }
+
+.voice-caption {
+  max-width: 640px;
+  min-height: 62px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text-3);
+  padding: 0 8px;
+  /* Long answers must not push the orb off screen — the caption scrolls, the layout does not */
+  max-height: 132px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.voice-caption::-webkit-scrollbar { display: none; }
+.voice-caption.has-text { color: var(--text); }
+
+.voice-controls {
+  display: flex; align-items: center; gap: 18px;
+  padding: 20px 0 34px;
+}
+.voice-ctl {
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.12s, border-color 0.15s;
+}
+.voice-ctl svg { width: 22px; height: 22px; }
+.voice-ctl:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+.voice-ctl:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.voice-ctl.active { background: var(--bg-chip); border-color: var(--text-3); }
+.voice-ctl.end {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.voice-ctl.end svg { transform: rotate(135deg); } /* the classic "hang up" tilt */
+.voice-ctl.end:hover { filter: brightness(1.1); }
+
+.voice-tip {
+  position: absolute;
+  bottom: 104px;
+  font-size: 12.5px;
+  color: var(--text-4);
+  animation: voiceIn 0.4s ease-out;
+}
+
+@media (max-width: 780px) {
+  .att-chip { max-width: 190px; }
+  .msg-att-img { width: 92px; height: 92px; }
+  .attach-btn { width: 32px; height: 32px; }
+  .voice-orb { width: min(38vh, 260px); height: min(38vh, 260px); }
+  .voice-caption { font-size: 16px; max-height: 96px; }
+  .voice-status { font-size: 15px; }
+  .voice-ctl { width: 52px; height: 52px; }
+  .voice-tip { bottom: 96px; }
+}
+
+/* The orb is the entire point of the screen; if it cannot move, say the state in words and
+   stop animating anything. */
+@media (prefers-reduced-motion: reduce) {
+  .voice-overlay, .voice-tip, .att-chip { animation: none; }
+  .voice-btn-orb { animation: none; }
+  .voice-dot.listening, .voice-dot.thinking { animation: none; }
 }

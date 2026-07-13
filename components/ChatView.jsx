@@ -6,12 +6,39 @@ import Widget from "./Widgets";
 import { renderRich, fmtTime, replyToText } from "@/lib/text";
 import { useI18n } from "@/lib/I18nContext";
 
+/* The thumbnail is the only copy of the image that survives a reload — the full-size data URL
+   is deliberately never persisted (see toStoredAttachments). A chat restored from localStorage
+   therefore shows the picture but cannot re-send it, which is correct: the model already read
+   it on the turn it was attached to. */
+function MessageAttachments({ files }) {
+  return (
+    <div className="msg-atts">
+      {files.map((file) =>
+        file.kind === "image" && file.thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a data: URL, already sized
+          <img key={file.id} className="msg-att-img" src={file.thumb} alt={file.name} title={file.name} />
+        ) : (
+          <span key={file.id} className="msg-att-file" title={file.name}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {file.name}
+          </span>
+        )
+      )}
+    </div>
+  );
+}
+
 function UserMessage({ msg }) {
   const { t } = useI18n();
+  const files = msg.attachments || [];
   return (
     <div className="msg user">
       <div className="avatar">{t("chat.you")}</div>
       <div className="bubble">
+        {files.length > 0 && <MessageAttachments files={files} />}
         {msg.content}
         <div className="msg-time">{fmtTime(msg.ts)}</div>
       </div>

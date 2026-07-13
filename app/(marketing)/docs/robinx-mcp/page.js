@@ -43,13 +43,13 @@ const registry = [
     name: "robinx_verdict",
     status: "live",
     line: "Is this safe?",
-    desc: "The composite rug-check. Contract source, honeypot behaviour, LP lock state, and the powers ownership still holds — folded into one verdict with the evidence still attached to it.",
+    desc: "The composite rug-check. Contract code, ownership, proxy state, privileged powers, DEX liquidity, and explicit unknowns — folded into one verdict with the evidence still attached to it.",
   },
   {
     name: "robinx_token",
     status: "live",
     line: "What is this token, really?",
-    desc: "Supply, liquidity, holder spread, and lock state for any token on the chain. The numbers a chart is drawn on top of, before anyone has drawn the chart.",
+    desc: "Token metadata and live DEX liquidity for contracts on the chain. Holder spread and lock state are not claimed unless a real source can measure them.",
   },
   {
     name: "robinx_deployer",
@@ -61,7 +61,7 @@ const registry = [
     name: "robinx_stats",
     status: "live",
     line: "Have they done this before?",
-    desc: "Deployer reputation across their full deployment history. Six launches, one honeypot, and a pattern you can see before you are inside it.",
+    desc: "Deployer reputation across the history the connected tools can actually resolve, with gaps called out instead of filled in.",
   },
   {
     name: "robinx_feed",
@@ -152,14 +152,14 @@ const horizons = [
     title: "Read — the chain, cross-examined",
     status: "live",
     body: "Six RobinX tools and an external MCP fleet, planned across by the model and checked against each other. This ships, right now, in production. Everything below is built on it.",
-    proof: "Rug-check, deployer forensics, launch feed, leaderboard, holder spread, honeypot behaviour.",
+    proof: "Rug-check, deployer forensics, launch feed, leaderboard, token metadata, DEX liquidity.",
   },
   {
     id: "forensics",
     era: "Next",
     title: "Forensics — the lies a chart cannot tell",
     status: "building",
-    body: "Holder clustering by funding path, bundler and sniper detection, wash-trade detection. Forty independent buyers who all took gas from one wallet six minutes before launch are not forty buyers — they are one entity wearing forty hats, and the first three blocks of a launch cannot lie about it.",
+    body: "Holder clustering by funding path, bundler and sniper detection, wash-trade detection. Wallets funded from one source right before launch are not independent buyers, and early blocks expose patterns a chart hides.",
     proof: "chain_holder_graph, chain_bundle_scan, chain_wash_scan",
   },
   {
@@ -167,7 +167,7 @@ const horizons = [
     era: "Then",
     title: "Write — launch from one sentence",
     status: "planned",
-    body: "\"Launch MYTOKEN, 1B supply, LP locked 12 months, ownership renounced.\" The agent assembles the deploy, the pool, the lock, and the renounce into one reviewable bundle with verified source, simulates it, and hands it to your wallet. It never holds a key. It proposes; you sign.",
+    body: "Describe the token, pool, lock, and ownership policy. The agent assembles one reviewable bundle with verified source, simulates it, and hands it to your wallet. It never holds a key. It proposes; you sign.",
     proof: "token_deploy, token_lp_seed, token_lp_lock, token_ownership",
   },
   {
@@ -342,7 +342,7 @@ export default function RobinXMcpPage() {
           </div>
           <div className={styles.mode}>
             <div className={styles.modeName}>
-              <span aria-hidden="true" className={styles.dotDemo} />0 keys held
+              <span aria-hidden="true" className={styles.dotNeutral} />0 keys held
             </div>
             <small className={styles.modeNote}>Read-only. The agent has nothing to sign with.</small>
           </div>
@@ -375,8 +375,8 @@ export default function RobinXMcpPage() {
         </p>
         <p className={styles.lead}>
           Nobody wired that sentence to a function. The agent read it, decided it needed the contract
-          source, the liquidity lock, the holder concentration, and the deployer&apos;s history,
-          called four different tools to get them, noticed that two of them disagreed, and said so.
+          contract code, ownership, DEX liquidity, privileged powers, and deployer history,
+          called the tools that could measure them, marked the missing checks as unknown, and said so.
           That is the entire difference between a search box and an agent, and RobinX MCP is what
           makes the second one possible.
         </p>
@@ -410,9 +410,8 @@ export default function RobinXMcpPage() {
             <h3>Cross-examination, not citation</h3>
             <p>
               One source saying a token is clean tells you one source has been fooled. The agent
-              checks DexScreener&apos;s liquidity against the chain&apos;s own balance, the honeypot
-              flag against an actual transaction trace, the holder graph against the deployer&apos;s
-              funding trail — and reports the contradiction rather than laundering it into a
+              checks market data against chain-readable contract state, compares ownership powers
+              against bytecode, separates measured signals from unknowns — and reports the contradiction rather than laundering it into a
               confident average.
             </p>
           </div>
@@ -422,7 +421,7 @@ export default function RobinXMcpPage() {
               Blockscout goes down; Etherscan answers instead. A paid tool returns a price probe;
               the agent says so rather than inventing the number it wanted. The plan survives its
               own tools failing, because on-chain tools fail constantly and an agent that cannot
-              survive that is a demo.
+              survive that cannot be trusted.
             </p>
           </div>
         </div>
@@ -603,7 +602,7 @@ export default function RobinXMcpPage() {
 
         <Code label=".env.local — the whole live-mode surface">{`ROBINX_ENGINE_KEY=...                 # all three turn live mode on together;
 ROBINX_ENGINE_URL=<base URL>          # none has a default, so missing any one
-ROBINX_ENGINE_MODEL=<model id>        # leaves the route on the demo agent
+ROBINX_ENGINE_MODEL=<model id>        # missing any one makes chat unavailable
 CHAT_TIMEOUT_MS=25000
 
 ENGINE_USER_USD_PER_DAY=0.25          # the engine bills per token, so /api/chat
@@ -614,9 +613,8 @@ ROBINX_WALLET_KEY=0x...               # optional — enables paid tools
 ROBINX_MAX_USD_PER_CALL=0.10          # the ceiling on any single call`}</Code>
 
         <p className={styles.lead} style={{ marginTop: 18 }}>
-          And when it breaks — a dead server, a timeout, a malformed reply — the response degrades to
-          the demo agent rather than to a stack trace. The user gets a worse answer. Never a broken
-          page.
+          And when it breaks, the failure stays honest: a dead MCP fleet is marked tools offline,
+          while a dead production engine returns unavailable instead of fabricated chain data.
         </p>
       </section>
 

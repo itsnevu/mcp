@@ -1,7 +1,7 @@
 # Bugglo — Agentic AI for Robinhood Chain (Next.js)
 
 A chat UI for Robinhood Chain — built with **Next.js (App Router) + React**, plus an
-API route that runs either as a local demo or in live mode via the **RobinX engine + robinx-mcp**.
+API route that answers only through the **RobinX engine + robinx-mcp**.
 
 ## ▶️ Running it
 
@@ -16,13 +16,13 @@ Production build: `npm run build && npm start`.
 
 | Feature | Notes |
 |---|---|
-| 📈 Ticker tape | Scrolling price strip up top (demo feed, pauses on hover, seamless loop) |
+| 📈 Ticker tape | Scrolling live price strip up top (pauses on hover, seamless loop) |
 | 💬 Multi-chat history | Persisted to `localStorage`; reopenable and deletable |
 | ⌨️ Slash commands | Type `/` → `/rugcheck`, `/trending`, `/sentiment`, `/wallet`, `/fud`, `/moving`, `/help` (navigate with ↑ ↓ Enter) |
 | 🛡️ Rich widgets | Rug-check report + risk gauge, trending table + sparkline, sentiment bar, wallet stat tiles |
 | 🎙️ Voice input | Web Speech API (Chrome/Safari); tap again to stop |
 | ⏹️ Stop generation | The button becomes a stop control while loading/typing, and cancels the request too (AbortController + 20s timeout) |
-| 🔌 Status pill | Distinguishes `Live data`, `Live ready`, `Demo mode`, and `Backend offline` |
+| 🔌 Status pill | Distinguishes `Live data`, `Live ready`, tools-offline, and `Backend offline` |
 | ⚙️ Settings | Theme, interface language, external backend URL + connection test, clear all chats |
 | 🌐 Languages | English, 中文, Español, 日本語, 한국어 — the whole app shell, not just a few strings |
 | 📋 Copy & timestamps | Hover/focus an agent reply for a copy button; every message is timestamped |
@@ -33,7 +33,7 @@ Production build: `npm run build && npm start`.
 
 The code is hardened against chat-switching race conditions while a reply is still
 streaming, malformed backend response shapes, IME composition, corrupt `localStorage`
-state, API rate limits, and it always has an explicit demo fallback.
+state, API rate limits, and production outages that must not turn into invented market data.
 
 ## 🌐 Adding or changing a language
 
@@ -73,27 +73,28 @@ the UI language — only what the user reads is translated.
    ```
 
 2. Run the app. `/api/chat` uses the engine + RobinX MCP once all three `ROBINX_ENGINE_*`
-   vars are set; drop any one of them and the route stays on the demo agent. If the live
-   backend errors, the response still falls back to demo.
+   vars are set. Drop any one of them and the route returns `503` rather than invented
+   market data.
 
 3. **The engine costs money per token, so `/api/chat` is metered.** Requests are capped per
    minute, per hour and per day, and the day's spend is capped in dollars — per user and
-   globally. Over any cap the route returns `429 { busy: true }` rather than a demo answer,
-   because quietly serving mock numbers to someone asking a real question about their money
+   globally. Over any cap the route returns `429 { busy: true }` rather than an answer,
+   because quietly serving made-up numbers to someone asking a real question about their money
    is worse than serving nothing. The caps and their defaults are documented at the top of
    [lib/rateLimit.js](lib/rateLimit.js); all of them are env-tunable.
 
 4. The API contract the UI understands:
 
    ```
-   POST /api/chat  { message, mode, history[] }
-     → { reply, source: "live"|"demo", backend }
+   POST /api/chat  { message, mode, history[], attachments[], incognito }
+     → { reply, source: "live", backend, degraded? }
      → 429 { error, busy: true, retryAfterMs }   when over a cap
-   GET  /api/health → { ok, service, mode, capabilities }
+     → 503 { error, unavailable: true }           when live production cannot answer
+   GET  /api/health?probe=1 → { ok, service, mode, capabilities, observedAt, uptimeSeconds }
+   GET  /api/usage          → { ok, user, usage }   authenticated quota snapshot
    ```
 
-   The shape of each `kind` is documented in [lib/demoAgent.js](lib/demoAgent.js).
-   Valid responses are rendered as widgets (gauge, sparkline, and so on); a
+   Valid response kinds are rendered as widgets (gauge, sparkline, and so on); a
    malformed response cannot break the UI (see the validation in [lib/text.js](lib/text.js)).
 
 ## 📁 Structure
@@ -103,7 +104,7 @@ app/
   layout.js            ← root layout + theme restore before first paint
   page.js              ← main page
   globals.css          ← all styling (dark/light design tokens)
-  api/chat/route.js    ← chat endpoint (demo) + engine/MCP wiring + spend guard
+  api/chat/route.js    ← chat endpoint + engine/MCP wiring + spend guard
   api/health/route.js  ← health check behind the status pill
 components/
   HoodScopeApp.jsx     ← top-level state + send/stop/history orchestration
@@ -113,16 +114,14 @@ components/
   ChatView.jsx         ← messages + typewriter effect
   Widgets.jsx          ← rugcheck/trending/sentiment/wallet widgets
   SettingsModal.jsx    ← settings (general, appearance, language, backend, data)
-  TickerTape.jsx       ← demo price ticker
+  TickerTape.jsx       ← live price ticker
   SvgSprite.jsx        ← SVG icons
 lib/
   i18n.js              ← locale registry, {token} interpolation, legacy migration
   I18nContext.jsx      ← I18nProvider, useI18n() → t / tRich
   locales/             ← en, zh, es, ja, ko
-  demoAgent.js         ← demo agent (used by the API route and as a client fallback)
   text.js              ← mini markdown renderer, reply validation, text utils
   commands.js          ← slash command list
-legacy-static/         ← old HTML+Node version (archived)
 ```
 
 ## ✅ Verify
@@ -135,4 +134,3 @@ npm run verify   # lint + tests + production build
 
 - **Live tools cost money**: some RobinX MCP tools use x402/USDC. Without
   `ROBINX_WALLET_KEY`, paid tools may return a price probe instead of data.
-- **Demo data**: figures carrying a `DEMO DATA` badge are placeholders, not financial advice.

@@ -39,10 +39,10 @@ const endpoints = [
     response: `{
   "ok": true,
   "service": "hoodscope-backend",
-  "mode": "demo",
+  "mode": "live-ready",
   "capabilities": {
-    "engine": false,
-    "mcp": false,
+    "engine": true,
+    "mcp": "up",
     "paidToolsEnabled": false
   }
 }`,
@@ -51,7 +51,7 @@ const endpoints = [
     method: "POST",
     path: "/api/chat",
     auth: "session required",
-    title: "Send a message to the demo or live agent.",
+    title: "Send a message to the live agent.",
     body: `{
   "message": "Rug check this contract: 0x...",
   "mode": "Auto",
@@ -65,8 +65,8 @@ const endpoints = [
     "kind": "text",
     "text": "Answer text..."
   },
-  "source": "demo",
-  "backend": "demo"
+  "source": "live",
+  "backend": "robinx-engine+robinx-mcp"
 }`,
   },
   {
@@ -134,7 +134,7 @@ const endpoints = [
 
 const replyKinds = [
   { kind: "text", desc: "Plain assistant response. Shape: { kind, text }." },
-  { kind: "rugcheck", desc: "Contract risk widget: risk score, verdict, checks, summary." },
+  { kind: "rugcheck", desc: "Contract risk widget: verdict, measured checks, unknowns, summary." },
   { kind: "trending", desc: "Trending tokens with mentions, sentiment, change, sparkline." },
   { kind: "sentiment", desc: "Bullish, bearish, and neutral split for a ticker or query." },
   { kind: "wallet", desc: "Wallet stats, labels, and risk flags." },
@@ -173,12 +173,12 @@ const toolGroups = [
       {
         name: "robinx_token",
         status: "live",
-        desc: "Supply, liquidity, holder spread, and lock state for any token on Robinhood Chain.",
+        desc: "Token metadata and live DEX liquidity for Robinhood Chain contracts. Holder spread and lock state are reported only when a real source can measure them.",
       },
       {
         name: "robinx_verdict",
         status: "live",
-        desc: "Composite rug-check: contract source, honeypot behaviour, LP lock, ownership powers.",
+        desc: "Composite rug-check: contract code, ownership, proxy state, privileged powers, DEX liquidity, and explicit unknowns for checks that cannot be measured yet.",
       },
       {
         name: "robinx_deployer",
@@ -225,7 +225,7 @@ const toolGroups = [
   {
     id: "write",
     title: "Write — deploy and token lifecycle",
-    prompt: "Launch MYTOKEN, 1B supply, 4% of it to the pool, LP locked 12 months, ownership renounced.",
+    prompt: "Launch a token with my chosen supply, pool, lock, and ownership policy.",
     blurb:
       "One sentence, one reviewable transaction bundle. The agent assembles the deploy, the pool, the lock, and the renounce — then hands it to your wallet to sign. It never holds a key and it never fires on its own.",
     tools: [
@@ -378,10 +378,10 @@ export default function DocsPage() {
         <div className={styles.modes}>
           <div className={styles.mode}>
             <div className={styles.modeName}>
-              <span aria-hidden="true" className={styles.dotDemo} />
-              Demo mode
+              <span aria-hidden="true" className={styles.dotStatusPlanned} />
+              Unconfigured
             </div>
-            <small className={styles.modeNote}>Default. No API key required.</small>
+            <small className={styles.modeNote}>No live engine credentials; chat refuses to answer.</small>
           </div>
           <div className={styles.mode}>
             <div className={styles.modeName}>
@@ -408,8 +408,8 @@ export default function DocsPage() {
         <p className={styles.lead}>
           {APP_NAME} is an agentic loop, not a search box. A request is planned by the RobinX engine,
           executed against on-chain tools, and returned as a typed reply the interface knows how
-          to render. Without credentials the same endpoints keep working in demo mode, so you can
-          build the whole frontend before you ever pay for a token.
+          to render. Without credentials the chat endpoint returns unavailable, so a frontend cannot
+          accidentally ship fabricated market data.
         </p>
         <div className={styles.grid}>
           <div className={styles.card}>
@@ -424,11 +424,10 @@ export default function DocsPage() {
             </ul>
           </div>
           <div className={styles.card}>
-            <h3>Two backends, one contract</h3>
+            <h3>One live contract</h3>
             <p>
-              The demo agent and the live RobinX agent return the same reply shape. If the live
-              agent fails, times out, or returns an invalid shape, the response falls back to demo
-              rather than breaking the UI — so a missing key degrades the answer, never the app.
+              The RobinX agent returns a typed reply shape. Engine failures return unavailable
+              instead of invented market data, while tool-only outages are badged as tools offline.
             </p>
           </div>
         </div>
@@ -439,7 +438,7 @@ export default function DocsPage() {
           <div className={styles.eyebrow}>Getting started</div>
           <h2 className={styles.sectionTitle}>Quickstart</h2>
           <p className={styles.lead}>
-            Install, run, and open the app. Demo mode needs no keys at all.
+            Install, configure live credentials, and open the app.
           </p>
         </div>
         <div className={styles.grid}>
@@ -467,8 +466,8 @@ npm start`}</Code>
           <div className={styles.eyebrow}>Getting started</div>
           <h2 className={styles.sectionTitle}>Configuration</h2>
           <p className={styles.lead}>
-            Everything except <code className={styles.inline}>AUTH_SECRET</code> is optional. Add a
-            key, get a capability; leave it out, keep demo mode.
+            <code className={styles.inline}>AUTH_SECRET</code> and the three engine variables are
+            required for chat to answer. Optional keys only add capabilities.
           </p>
         </div>
         <Code label=".env.local">{`AUTH_SECRET=replace-with-long-random-secret
@@ -476,7 +475,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_ID=...
 
 # live mode — all three required, none of them has a default.
-# Miss any one and the route stays on the demo agent.
+# Miss any one and /api/chat returns unavailable.
 ROBINX_ENGINE_KEY=...
 ROBINX_ENGINE_URL=<OpenAI-compatible chat-completions base URL>
 ROBINX_ENGINE_MODEL=<model id from your provider>
@@ -566,7 +565,7 @@ console.log(data.source, data.reply);`}</Code>
           <p className={styles.lead}>
             The UI renders a widget automatically when <code className={styles.inline}>reply.kind</code>{" "}
             is one of the kinds below. An invalid shape is rejected before it can reach the UI, and
-            the client falls back to the demo agent. Greyed kinds ship alongside the tools in{" "}
+            the client refuses to render it. Greyed kinds ship alongside the tools in{" "}
             <a href="#agent-surface">the agent surface</a> — they are not live yet.
           </p>
         </div>
@@ -643,9 +642,9 @@ console.log(data.source, data.reply);`}</Code>
           <div className={styles.card}>
             <h3>What happens when it breaks</h3>
             <p>
-              A failed tool, a timeout, or a malformed reply degrades to the demo agent with{" "}
-              <code className={styles.inline}>source: &quot;demo&quot;</code>. The user gets a worse
-              answer, never a broken page.
+              A failed MCP fleet lets the live engine answer tool-less with a tools-offline badge.
+              A failed production engine returns unavailable. The app never turns an outage into
+              invented market data.
             </p>
           </div>
         </div>
@@ -711,23 +710,6 @@ console.log(data.source, data.reply);`}</Code>
           <em>unsigned</em> one, plus the simulation of what it would do, and the UI hands it to your
           wallet. The agent proposes; you sign.
         </p>
-        <Code label="planned — chat reply for a deploy intent">{`{
-  "reply": {
-    "kind": "deploy",
-    "token": { "name": "MYTOKEN", "symbol": "MYT", "supply": "1000000000" },
-    "plan": [
-      { "step": "token_deploy",   "verifiedSource": true },
-      { "step": "token_lp_seed",  "liquidityUsd": 4000 },
-      { "step": "token_lp_lock",  "months": 12 },
-      { "step": "token_ownership", "action": "renounce" }
-    ],
-    "simulation": { "gasUsd": 1.84, "leavesWallet": "4000 USDC + gas" },
-    "transactions": ["0x02f8...unsigned"],
-    "requiresSignature": true
-  },
-  "source": "live",
-  "backend": "robinx-engine+robinx-mcp"
-}`}</Code>
       </section>
 
       <section className={styles.section} id="guardrails">
@@ -800,7 +782,7 @@ console.log(data.source, data.reply);`}</Code>
           <div className={styles.card}>
             <h3>Status labels in the UI</h3>
             <ul className={styles.list}>
-              <li><strong>Demo mode</strong> — API reachable, no live credentials.</li>
+              <li><strong>Backend offline</strong> — health or chat failed, or live credentials are missing.</li>
               <li><strong>Live ready</strong> — credentials present.</li>
               <li><strong>Live data</strong> — the last reply came from the live backend.</li>
               <li><strong>Backend offline</strong> — health or chat request failed.</li>

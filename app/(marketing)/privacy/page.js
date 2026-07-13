@@ -29,8 +29,8 @@ export default function PrivacyPage() {
         Clearing site data removes that local history.
       </p>
       <p>
-        When a live backend is configured, chat prompts and recent context are sent to the backend
-        endpoint you selected. Demo mode runs with local placeholder responses.
+        Chat prompts and recent context are sent to the backend endpoint you selected. If the live
+        engine is not configured, the chat endpoint refuses to answer.
       </p>
       <p>
         Never enter private keys, recovery phrases, passwords, or other secrets into the chat.

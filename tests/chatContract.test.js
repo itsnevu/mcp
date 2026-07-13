@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_ATTACHMENT_PROMPT,
   MAX_HISTORY_ITEMS,
   MAX_MESSAGE_CHARS,
   isValidChatResponse,
@@ -23,7 +24,24 @@ describe("chat contract", () => {
       message: "hello",
       mode: "Auto",
       history: [{ role: "user", text: "keep" }],
+      attachments: [],
+      incognito: false,
     });
+  });
+
+  it("accepts a file with no prose, but still rejects an empty request", () => {
+    const withFile = parseChatRequest({
+      message: "",
+      attachments: [{ kind: "text", name: "notes.csv", mime: "text/csv", text: "a,b\n1,2" }],
+    });
+
+    // "read this" is a complete request when a file came with it — the prompt is supplied for it.
+    expect(withFile.ok).toBe(true);
+    expect(withFile.value.message).toBe(DEFAULT_ATTACHMENT_PROMPT);
+    expect(withFile.value.attachments).toHaveLength(1);
+    expect(parseChatRequest({ message: "secret", incognito: true }).value.incognito).toBe(true);
+
+    expect(parseChatRequest({ message: "", attachments: [] })).toMatchObject({ ok: false, status: 400 });
   });
 
   it("rejects missing and oversized messages", () => {
@@ -46,7 +64,7 @@ describe("chat contract", () => {
   });
 
   it("validates full API response envelope", () => {
-    expect(isValidChatResponse({ reply: { kind: "text", text: "ok" }, source: "demo" })).toBe(true);
+    expect(isValidChatResponse({ reply: { kind: "text", text: "ok" }, source: "live" })).toBe(true);
     expect(isValidChatResponse({ reply: { kind: "text", text: "ok" }, source: "unknown" })).toBe(false);
   });
 });
