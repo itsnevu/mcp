@@ -82,6 +82,7 @@ export default function AuthGate({ children }) {
   useEffect(() => {
     if (loading || user || !googleClientId || !googleRef.current) return;
     let cancelled = false;
+    let observer;
     loadGoogleScript()
       .then(() => {
         if (cancelled) return;
@@ -107,26 +108,45 @@ export default function AuthGate({ children }) {
             }
           },
         });
-        /* theme is what put the white frame around this button: "filled_black" makes GSI
-           paint a 36px white tile behind the G and drop the button's border entirely.
-           "outline_dark" paints neither, and its native look — 40px tall, 4px radius,
-           #131314 on a 1px #8e918f stroke — is already .auth-wallet-btn.
-           No `width` either: without it GSI writes no inline width, so the button simply
-           fills the panel and follows it on resize (see .auth-google-wrap in globals.css).
-           renderButton empties the container before it draws, so re-running this effect on a
-           language change redraws the button rather than stacking a second one. */
-        window.google.accounts.id.renderButton(googleRef.current, {
-          theme: "outline_dark",
-          size: "large",
-          shape: "rectangular",
-          text: "continue_with",
-          logo_alignment: "center",
-          locale: activeLang,
-        });
+        /* theme: "filled_black" makes GSI paint a 36px white tile behind the G and drop the
+           button's border entirely. "outline_dark" paints neither, and its native look —
+           40px tall, 4px radius, #131314 on a 1px #8e918f stroke — is already .auth-wallet-btn.
+
+           `width` is the part that was missing, and it is the whole white frame. GSI sizes the
+           box it draws from the button's own text, and it ignores CSS width on that subtree —
+           the pixel `width` here is the only lever (a minimum, capped at 400 by Google). Left
+           unset, the personalized "Continue as <name>" variant is as wide as the name and the
+           email inside it, so it came out a different width from the wallet buttons beside it,
+           and the stylesheet's `width: 100% !important` only stretched the button *within* that
+           mis-sized box — the leftover was the frame. Measuring the wrap and handing GSI that
+           number sizes the box itself, so every button in the panel matches.
+
+           renderButton empties the container before it draws, so redrawing on resize or on a
+           language change replaces the button rather than stacking a second one. */
+        const drawButton = () => {
+          const el = googleRef.current;
+          if (!el) return;
+          const width = Math.min(400, Math.round(el.getBoundingClientRect().width));
+          if (!width) return;
+          window.google.accounts.id.renderButton(el, {
+            theme: "outline_dark",
+            size: "large",
+            shape: "rectangular",
+            text: "continue_with",
+            logo_alignment: "center",
+            locale: activeLang,
+            width,
+          });
+        };
+
+        drawButton();
+        observer = new ResizeObserver(drawButton);
+        observer.observe(googleRef.current);
       })
       .catch(() => setError(t("auth.error.googleScript")));
     return () => {
       cancelled = true;
+      observer?.disconnect();
     };
   }, [googleClientId, loading, user, activeLang, t]);
 

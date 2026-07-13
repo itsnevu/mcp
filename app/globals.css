@@ -259,21 +259,17 @@ button, input, textarea, select { font-family: inherit; }
   width: 100%;
   min-height: 40px;
 }
-.auth-google-wrap > div,
-.auth-google-wrap > div > div {
-  width: 100%;
-}
-/* role="button" is stable ARIA; GSI's class names are hashed and change under us. !important
-   is needed only for the width pair, because the personalized "Continue as …" variant carries
-   an inline max-width. The colours restate outline_dark's own palette so the button still
-   matches if Google ever falls that theme back to its white default. */
+/* No geometry below this line. GSI sizes its own subtree from the pixel `width` it is rendered
+   with, and AuthGate.jsx now measures this wrap and hands it that number, so the box GSI draws
+   is already the width of the wallet buttons. Forcing `width: 100% !important` on the inner
+   button instead — which is what used to be here — stretched the button past that box without
+   moving the box, and the strip of container left showing around it was the white frame people
+   were seeing. Let GSI do the layout; only restate its colours.
+
+   role="button" is stable ARIA; GSI's class names are hashed and change under us. The colours
+   restate outline_dark's own palette so the button still matches the panel if Google ever falls
+   that theme back to its white default. */
 .auth-panel .auth-google-wrap div[role="button"] {
-  width: 100% !important;
-  max-width: none !important;
-  box-sizing: border-box;
-  height: 40px;
-  border: 1px solid #8e918f;
-  border-radius: 4px;
   background-color: #131314;
   color: #e3e3e3;
 }
