@@ -9,28 +9,30 @@ User=bugglo
 WorkingDirectory=/srv/bugglo
 EnvironmentFile=/srv/bugglo/.env.local
 Environment=NODE_ENV=production
-Environment=PORT=3000
 
-# ONE process. Not a cluster, not N replicas.
+# Port 3100, NOT 3000 — SpacetimeDB already owns 3000 on this box.
+#
+# ONE process. Not a cluster.
 #
 # The spend guard in lib/rateLimit.js keeps its counters in this process's memory, so the
-# caps are per-process by construction. Run four workers and ENGINE_GLOBAL_USD_PER_DAY=5
-# silently becomes a $20/day ceiling — the exact bill you set the cap to prevent. If you
-# ever do need to scale out, move the guard to Redis FIRST, then add workers.
-ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p 3000
+# caps are per-process by construction: run four workers and ENGINE_GLOBAL_USD_PER_DAY=5
+# quietly becomes a $20/day ceiling — the exact bill the cap exists to prevent. Move the
+# guard to Redis BEFORE ever adding a second worker.
+ExecStart=/usr/bin/npm run start -- -p 3100
 
-# The agent spawns MCP servers (robinx-mcp, boo-crypto, dexscreener) as child processes and
-# they must be reaped with it, or a restart leaves orphans holding stdio pipes.
+# The agent spawns MCP servers (robinx-mcp, boo-crypto, dexscreener) as child processes.
+# control-group reaping stops a restart from orphaning them holding stdio pipes.
 KillMode=control-group
 Restart=always
 RestartSec=5
 
-# The MCP children are untrusted code from npm. Give them as little of the host as possible.
+# Those MCP children are third-party npm code, fetched at runtime. Keep them away from the
+# rest of the box — the Mythreach game servers and SpacetimeDB live here too.
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/srv/bugglo/.next /srv/bugglo/node_modules /home/bugglo/.npm
+ProtectSystem=full
+ProtectControlGroups=true
+ProtectKernelTunables=true
 
 StandardOutput=journal
 StandardError=journal
