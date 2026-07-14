@@ -20,6 +20,8 @@ export const metadata = pageMetadata({
     "live engine unavailable",
     "slash commands",
     "rug check accuracy",
+    "bugglo CLI",
+    "npx bugglo",
     `${CHAIN_NAME} AI`,
   ],
 });
@@ -83,6 +85,10 @@ const faqSections = [
       {
         question: "What are Slash Commands?",
         answer: `<p>Slash commands are shortcuts designed for power users to bypass the AI's natural language parsing and directly trigger specific on-chain tools. Currently supported commands include <code>/market</code> (for broader macroeconomic trends on the chain), <code>/wallet [address]</code> (to immediately pull the holdings and transaction history of a specific address), and <code>/contract [address]</code> (to force a deep-dive security audit of a smart contract).</p>`,
+      },
+      {
+        question: "Can I run a rug check from my terminal, without the web app?",
+        answer: `<p>Yes. The chain-reading engine is published on npm as <code>bugglo</code>, and it runs with no account, no API key, and no backend — it reads ${CHAIN_NAME} directly from your own machine:</p><p><code>npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1</code></p><p>It prints a full rug-check report — contract existence, ownership, upgradeable-proxy status, privileged powers, and DEX liquidity — together with the checks it <strong>could not</strong> run, because a check that did not run is never a check that passed. For AI agents, the companion package <code>bugglo-mcp</code> exposes the same engine as an MCP server for Claude Desktop, Claude Code, Cursor, or your own agent. Both are MIT, and the full CLI documentation is on the Bugglo CLI docs page.</p>`,
       },
     ],
   },

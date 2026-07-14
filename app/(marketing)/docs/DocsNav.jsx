@@ -51,6 +51,30 @@ const PAGES = [
     ],
   },
   {
+    path: "/docs/bugglo-cli",
+    label: "Bugglo CLI",
+    nav: [
+      {
+        title: "Bugglo CLI",
+        items: [
+          ["what", "What it is"],
+          ["quickstart", "Install and run"],
+          ["commands", "Commands"],
+          ["verdict", "Reading the report"],
+        ],
+      },
+      {
+        title: "Beyond the terminal",
+        items: [
+          ["limits", "What it will not fake"],
+          ["mcp", "Use it from an agent"],
+          ["library", "Library API"],
+          ["cli-faq", "FAQ"],
+        ],
+      },
+    ],
+  },
+  {
     path: "/docs/robinx-mcp",
     label: "RobinX MCP",
     nav: [

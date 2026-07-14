@@ -57,6 +57,7 @@ export default function MarketingLayout({ children }) {
                   every page of the site, which is the worst place to bleed crawl
                   budget and link equity. The real developer surfaces are below. */}
               <Link href="/docs">Documentation</Link>
+              <Link href="/docs/bugglo-cli">Bugglo CLI</Link>
               <Link href="/docs/robinx-mcp">RobinX MCP</Link>
               <Link href="/docs#api">API reference</Link>
               <Link href="/docs#live">Live mode setup</Link>

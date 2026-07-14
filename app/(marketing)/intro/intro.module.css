@@ -229,6 +229,21 @@
   padding: 1px 6px;
   color: var(--text);
 }
+
+/* The one code block on this page. A shell line is long and must never widen the
+   article on a phone, so it scrolls inside itself rather than pushing the layout. */
+.installBlock {
+  margin: 16px 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  background: var(--bg-chip);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text);
+}
 .fnRef a {
   color: var(--accent);
   text-decoration: none;

@@ -3,6 +3,23 @@
 A chat UI for Robinhood Chain — built with **Next.js (App Router) + React**, plus an
 API route that answers only through the **RobinX engine + robinx-mcp**.
 
+This repo is an npm workspace. Alongside the web app it publishes two packages that
+carry the same chain-reading engine, so the app, the terminal, and an agent cannot
+drift apart about what a contract is:
+
+| Package | What it is |
+|---|---|
+| [`bugglo`](packages/bugglo/) | The CLI + library. `npx bugglo <address>` — no account, no API key, no backend. |
+| [`bugglo-mcp`](packages/bugglo-mcp/) | The same engine as an MCP server, for Claude Desktop / Cursor / your own agent. |
+
+```bash
+npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
+```
+
+Both are MIT and documented at `/docs/bugglo-cli`. They depend on nothing in this app —
+`bugglo` pulls in viem and nothing else, because `npx` cold-start is the entire
+wow-moment budget.
+
 ## ▶️ Running it
 
 ```bash
@@ -122,6 +139,10 @@ lib/
   locales/             ← en, zh, es, ja, ko
   text.js              ← mini markdown renderer, reply validation, text utils
   commands.js          ← slash command list
+  chainData.js         ← app-side wrapper over the `bugglo` package
+packages/              ← published to npm; no dependency on the app
+  bugglo/              ← chain.js (the engine) + cli.js + report.js
+  bugglo-mcp/          ← MCP adapter over `bugglo`. Seven tools, chain 4663 only.
 ```
 
 ## ✅ Verify

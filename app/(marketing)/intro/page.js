@@ -220,12 +220,30 @@ export default function IntroPage() {
           fully installable PWA with offline fallback. We are eager to hear where it is
           useful, where it is wrong, and what you want it to do next.
         </p>
+        <p>
+          The rug-check engine also ships without us in the path. It is on npm as{" "}
+          <code className={styles.inlineCode}>bugglo</code>: one command, no account, no API
+          key, no backend — it reads {CHAIN_NAME} straight from your own machine and prints
+          the three checks it could not run alongside the ones it could.
+        </p>
+        <pre className={styles.installBlock}>
+          <code>npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1</code>
+        </pre>
+        <p>
+          For agents, <code className={styles.inlineCode}>bugglo-mcp</code> is the same engine
+          as an MCP server — four lines in an <code className={styles.inlineCode}>mcp.json</code>{" "}
+          and Claude Desktop, Cursor, or your own agent gets the tools directly. Both are MIT.{" "}
+          <Link href="/docs/bugglo-cli">Read the CLI docs</Link>.
+        </p>
         <div className={styles.ctaRowLeft}>
           <Link href="/" className={shell.primaryCta}>
             Try {APP_NAME}
             <span aria-hidden="true" className={shell.arrow}>
               ↗
             </span>
+          </Link>
+          <Link href="/docs/bugglo-cli" className={shell.ghostCta}>
+            Bugglo CLI
           </Link>
         </div>
 

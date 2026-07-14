@@ -10,6 +10,7 @@ const routes = [
   { path: "/", changeFrequency: "daily", priority: 1.0 },
   { path: "/intro", changeFrequency: "weekly", priority: 0.9 },
   { path: "/docs", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/docs/bugglo-cli", changeFrequency: "weekly", priority: 0.8 },
   { path: "/docs/robinx-mcp", changeFrequency: "weekly", priority: 0.8 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
   { path: "/learn", changeFrequency: "monthly", priority: 0.5 },

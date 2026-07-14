@@ -54,6 +54,18 @@ const CAPABILITIES = [
     body: "You never choose a data source. The agent plans its own route across Blockscout, DexScreener, whale-cluster analysis, and the raw RPC — and reroutes when one of them fails.",
   },
   {
+    status: "live",
+    prompt: "npx bugglo 0x7f3a…c9d2",
+    title: "Rug-check from your terminal, with no account",
+    body: "The same chain-reading engine as the app, published on npm as bugglo. One command, no API key, no signup, no backend in the path — it reads Robinhood Chain from your own machine and prints what it found, plus the three checks it could not run. A zero exit code means the check ran, not that the token is safe.",
+  },
+  {
+    status: "live",
+    prompt: "(from inside Claude Desktop, Cursor, or your own agent)",
+    title: "Bugglo as an MCP server",
+    body: "Shipped, as bugglo-mcp on npm. Four lines in an mcp.json and your own agent gets seven tools against chain 4663 — rug check, ownership, proxy status, powers scan, market, and the one that matters most: the list of what cannot be checked. It is only an adapter; the chain logic stays in bugglo, so your agent and our app cannot disagree about a contract.",
+  },
+  {
     status: "building",
     prompt: "Do these holders look organic?",
     title: "Holder clustering by funding path",
@@ -127,9 +139,9 @@ const CAPABILITIES = [
   },
   {
     status: "planned",
-    prompt: "(from inside Claude Desktop, Cursor, or your own agent)",
-    title: "Bugglo as an MCP server",
-    body: "Flip it around. Point your own agent at Bugglo and call our tools directly — rug-check, deployer history, chain state — as primitives in whatever you're building. We're an MCP client today. Being the server is a one-way door worth opening.",
+    prompt: "(from your agent) Who deployed this, and what else have they shipped?",
+    title: "Deployer forensics, as a tool anyone can call",
+    body: "bugglo-mcp already hands your agent everything readable from the chain itself. The half it cannot serve is the half that needs an indexer behind it: deployer reputation, insider distribution, the history that turns an address into a rap sheet. Exposing RobinX MCP as a public server — scoped keys, per-tool metering — is what closes that gap, and it is not built yet.",
   },
   {
     status: "research",
