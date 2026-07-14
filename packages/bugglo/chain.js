@@ -28,7 +28,7 @@ export const ROBINHOOD_CHAIN_ID = 4663;
 /* The chain's own RPC. Overridable, because a public RPC is a single point of failure and the
    day it rate-limits us we want to repoint it without a deploy — not because the default is in
    any doubt (chainid.network lists exactly this endpoint for chain 4663). */
-const RPC_URL = process.env.ROBINX_RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
+export const RPC_URL = process.env.ROBINX_RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
 
 const RPC_TIMEOUT_MS = Number(process.env.CHAIN_RPC_TIMEOUT_MS) || 10_000;
 const DEX_TIMEOUT_MS = Number(process.env.CHAIN_DEX_TIMEOUT_MS) || 8_000;

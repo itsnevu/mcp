@@ -11,6 +11,6 @@ export default function Image() {
   return ogImage({
     eyebrow: "Privacy",
     title: "Data usage and Incognito Mode",
-    subtitle: "No local history, no model training, and conversations discarded the moment you close the chat.",
+    subtitle: "No local history on this device. Incognito requests still go to the backend and configured engine.",
   });
 }

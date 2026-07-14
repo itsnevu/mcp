@@ -1,0 +1,49 @@
+{
+  "name": "bugglo",
+  "version": "0.1.1",
+  "description": "Read Robinhood Chain (4663) directly: rug checks, ownership, upgradeable-proxy and privileged-function disclosure. No API key, no account, no backend. Reports UNKNOWN as a first-class result — a check that did not run is never a check that passed.",
+  "type": "module",
+  "license": "MIT",
+  "author": "itsnevu",
+  "homepage": "https://github.com/itsnevu/mcp/tree/main/packages/bugglo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsnevu/mcp.git",
+    "directory": "packages/bugglo"
+  },
+  "bugs": {
+    "url": "https://github.com/itsnevu/mcp/issues"
+  },
+  "bin": {
+    "bugglo": "cli.js"
+  },
+  "exports": {
+    ".": "./chain.js",
+    "./chain": "./chain.js",
+    "./report": "./report.js"
+  },
+  "files": [
+    "cli.js",
+    "chain.js",
+    "report.js",
+    "README.md"
+  ],
+  "keywords": [
+    "robinhood-chain",
+    "chain-4663",
+    "rug-check",
+    "rugcheck",
+    "token-safety",
+    "smart-contract",
+    "evm",
+    "viem",
+    "crypto"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "//": "viem, and nothing else. This package is what `npx bugglo` will install, and npx cold-start is the entire wow-moment budget. Every dependency added here is paid for by a stranger, in silence, before they see anything.",
+  "dependencies": {
+    "viem": "^2.55.1"
+  }
+}

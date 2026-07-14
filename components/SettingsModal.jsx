@@ -181,15 +181,15 @@ export default function SettingsModal({
         <div className="settings-list">
           <div>
             <strong>Incognito chats</strong>
-            <span>Kept in memory only, excluded from localStorage, and sent to the backend with an incognito flag.</span>
+            <span>Kept in memory only, excluded from localStorage, and still sent to the backend for a reply.</span>
           </div>
           <div>
             <strong>Attachments</strong>
             <span>Images are downscaled before upload; PDFs are converted to text in the browser when possible.</span>
           </div>
           <div>
-            <strong>Model storage</strong>
-            <span>Live engine requests are sent with storage disabled. The app does not train models on chat history.</span>
+            <strong>External processing</strong>
+            <span>Chat text, attachments, and voice transcripts are sent to the configured engine when needed.</span>
           </div>
         </div>
         <div className="settings-group">

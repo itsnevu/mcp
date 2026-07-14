@@ -60,7 +60,7 @@ const faqSections = [
     items: [
       {
         question: "What is Incognito Mode and how does it work?",
-        answer: `<p>Incognito Mode is a privacy-first feature designed for users who want to research sensitive tokens or wallets without leaving a trace. When you toggle Incognito Mode (via the ghost icon in the sidebar), the application enforces strict ephemeral data handling:</p><ul><li><strong>No Local Storage:</strong> Chats are kept in active memory and never written to your browser's IndexedDB or LocalStorage.</li><li><strong>No Server Logs:</strong> The backend API strips logging mechanisms for these specific session requests.</li><li><strong>No AI Training:</strong> Your prompts and the associated responses are explicitly flagged via API headers to opt out of any third-party model training pipelines.</li></ul><p>The moment you refresh the page or close the tab, the entire conversation evaporates permanently.</p>`,
+        answer: `<p>Incognito Mode is for chats you do not want saved to this browser's stored history. When you toggle Incognito Mode (via the ghost icon in the sidebar), the app keeps that chat in active memory and excludes it from LocalStorage.</p><p>Incognito requests still go to the backend and configured engine so the app can answer. It is best understood as "not saved on this device", not as "not seen by anyone". The moment you refresh the page or close the tab, the local incognito conversation is gone.</p>`,
       },
       {
         question: "Are my wallet credentials safe?",
