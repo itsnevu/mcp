@@ -214,7 +214,13 @@ async function dexPairs(address) {
  * its first minutes, and shouting "HONEYPOT" at one would be a libel-grade false positive. So a
  * zero-sell reading is only allowed to mean anything once there are enough real buys behind
  * it (MIN_BUYS), and even then it is reported as "nobody has sold", not as "you cannot sell".
- * The only thing that proves you cannot sell is a sell simulation, which we cannot do read-only.
+ *
+ * The only thing that proves you cannot sell is a sell simulation: an eth_call against the router
+ * from a holder's position, with state overrides for balance and allowance. eth_call is read-only —
+ * it changes no state and needs no key — so this IS buildable from here. We have not built it.
+ * That is why UNMEASURABLE.honeypotSimulation says "Not run" and not "cannot run": reading our own
+ * unbuilt work as an impossibility would launder ignorance into a clean excuse, which is the exact
+ * move this file exists to refuse.
  */
 const MIN_BUYS_FOR_SELL_SIGNAL = 30;
 

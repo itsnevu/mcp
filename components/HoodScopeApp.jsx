@@ -10,6 +10,7 @@ import InputBar from "./InputBar";
 import ChatView from "./ChatView";
 import SettingsModal from "./SettingsModal";
 import VoiceMode from "./VoiceMode";
+import VoiceAnnounce from "./VoiceAnnounce";
 /* The browser has no business inventing an answer when the backend does not give it one. */
 import { replyToText, isValidReply } from "@/lib/text";
 import { APP_NAME, CHAIN_NAME, isValidChatResponse } from "@/lib/chatContract";
@@ -727,6 +728,10 @@ export default function HoodScopeApp() {
         onThemeChange={applyTheme}
       />
       <VoiceMode open={voiceOpen} onClose={closeVoice} onSend={voiceSend} showToast={showToast} />
+      {/* Home only: in a conversation the bottom of the screen belongs to the input dock, and a
+          banner parked on top of the composer is an obstacle, not an announcement. Every load
+          starts on home (activeId is null), so a first-time user still meets it. */}
+      {!chatting && <VoiceAnnounce voiceOpen={voiceOpen} onStart={() => setVoiceOpen(true)} />}
       <div className={"toast" + (toastShow ? " show" : "")}>{toastMsg}</div>
     </>
   );
