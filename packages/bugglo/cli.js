@@ -5,7 +5,7 @@
  * command must not grow separate ideas of what "rug check" means.
  */
 
-const VERSION = "0.1.1";
+const VERSION = "0.2.0";
 const DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_CHAIN_ID = 4663;
 const CHAIN_ID_HEX = `0x${ROBINHOOD_CHAIN_ID.toString(16)}`;
@@ -166,35 +166,21 @@ function paint(enabled) {
 }
 
 async function rpcPreflight(rpcUrl) {
-  let response;
+  /* rpcRequest routes around DNS-level blocking (see rpc.js): direct first, then DoH to the real IP
+     if the host's name is poisoned — the case that silently killed this tool on Indonesian ISPs.
+     Loaded here, not at the top, so `bugglo --help`/`--version` never pay for it. */
+  const { rpcRequest } = await import("./rpc.js");
+  let chainId;
   try {
-    response = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }),
-      signal: AbortSignal.timeout(8000),
-    });
+    chainId = await rpcRequest(rpcUrl, "eth_chainId", [], { timeout: 8000 });
   } catch (error) {
     return { ok: null, warning: `cannot reach RPC ${rpcUrl}: ${error?.message || error}` };
   }
 
-  const body = await response.text();
-  let json;
-  try {
-    json = JSON.parse(body);
-  } catch {
+  if (chainId !== CHAIN_ID_HEX) {
     return {
       ok: false,
-      error:
-        `${rpcUrl} answered with non-JSON, not JSON-RPC. First bytes: ` +
-        body.slice(0, 120).replace(/\s+/g, " "),
-    };
-  }
-
-  if (json?.result !== CHAIN_ID_HEX) {
-    return {
-      ok: false,
-      error: `${rpcUrl} reports chain ${json?.result || "unknown"}; expected ${CHAIN_ID_HEX} (Robinhood Chain ${ROBINHOOD_CHAIN_ID})`,
+      error: `${rpcUrl} reports chain ${chainId || "unknown"}; expected ${CHAIN_ID_HEX} (Robinhood Chain ${ROBINHOOD_CHAIN_ID})`,
     };
   }
 

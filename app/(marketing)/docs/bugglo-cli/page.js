@@ -130,6 +130,10 @@ const faqs = [
     question: "Is it safe to run against a token I do not trust?",
     answer: "It only reads. bugglo has no wallet, holds no key, signs nothing, and sends no transaction — there is no code path in it that can move funds. The worst a hostile contract can do to it is return data it refuses to interpret.",
   },
+  {
+    question: "I'm in Indonesia and it says CANNOT CHECK. Do I need a VPN?",
+    answer: `No. Some Indonesian ISPs block the robinhood.com domain through the government Trust Positif DNS filter, so a lookup of rpc.mainnet.chain.robinhood.com returns the filter's server instead of the chain. bugglo v0.2.0+ handles this automatically: when the direct connection fails it re-resolves the host over DNS-over-HTTPS (which the ISP resolver cannot poison) and connects straight to the real IP, with TLS certificate validation still pinned to the true hostname. No VPN, no DNS change, no --rpc flag. Make sure you're on the latest version (npx bugglo@latest). Only if a network also blocks the DoH resolvers do the manual fallbacks apply: switch your DNS to 1.1.1.1 or 8.8.8.8, pass your own endpoint with --rpc, or use a VPN.`,
+  },
 ];
 
 function Code({ label, children }) {
@@ -280,6 +284,49 @@ CHAIN_DEX_TIMEOUT_MS=8000`}</Code>
           verdict — which, on the day the RPC is down and you are in a hurry, is the only behaviour
           worth anything.
         </p>
+
+        <div className={styles.card} style={{ marginTop: 18 }} id="blocked">
+          <h3>Blocked networks (Indonesia and elsewhere) are handled automatically</h3>
+          <p>
+            {CHAIN_NAME}&apos;s RPC lives on a <code className={styles.inline}>robinhood.com</code>{" "}
+            subdomain, and some ISPs block that domain wholesale — most notably Indonesian networks
+            running the government <strong>Trust Positif</strong> DNS filter, which answers a lookup
+            of <code className={styles.inline}>rpc.mainnet.chain.robinhood.com</code> with the
+            filter&apos;s own server instead of the chain. The endpoint itself is not geo-blocked;
+            only its <em>name</em> is poisoned.
+          </p>
+          <p style={{ marginTop: 12 }}>
+            So <strong>bugglo v0.2.0+ routes around it on its own.</strong> When a direct connection
+            fails, it re-resolves the host over DNS-over-HTTPS — which the ISP&apos;s resolver cannot
+            poison — and connects straight to the real IP, keeping TLS SNI and certificate validation
+            pinned to the true hostname. The same endpoint, reached around the block. No VPN, no DNS
+            change, no <code className={styles.inline}>--rpc</code> flag, no API key. If it still can
+            confirm chain 4663, it prints a normal report; if it genuinely cannot, it says{" "}
+            <code className={styles.inline}>CANNOT CHECK</code> and never guesses.
+          </p>
+          <p style={{ marginTop: 12 }}>
+            The fallbacks below only matter on the rare network that blocks the DoH resolvers too, or
+            if you are pinned to an older build:
+          </p>
+          <ol style={{ margin: "12px 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
+            <li>
+              <strong>Switch your DNS to Cloudflare (1.1.1.1) or Google (8.8.8.8).</strong> A
+              resolver outside your ISP sidesteps a name-level block.
+            </li>
+            <li>
+              <strong>Point bugglo at your own RPC</strong> on a domain that is not blocked:
+            </li>
+          </ol>
+          <Code label="shell — your own endpoint, if you ever need it">{`npx bugglo --rpc https://robinhood-mainnet.g.alchemy.com/v2/YOUR_KEY 0x2103…
+
+# or set it once for the session
+export ROBINX_RPC_URL=https://robinhood-mainnet.g.alchemy.com/v2/YOUR_KEY
+npx bugglo 0x2103…`}</Code>
+          <p style={{ marginTop: 12 }}>
+            <strong>3. Use a VPN</strong> — the heaviest hammer, needed only if a deeper block
+            survives everything above.
+          </p>
+        </div>
       </section>
 
       <section className={styles.section} id="commands">
@@ -541,7 +588,7 @@ import { renderRugCheck, renderOneLine } from "bugglo/report";`}</Code>
       <section className={styles.section} id="cli-faq">
         <div className={styles.sectionHead}>
           <div className={styles.eyebrow}>Questions</div>
-          <h2 className={styles.sectionTitle}>The six people actually ask</h2>
+          <h2 className={styles.sectionTitle}>The seven people actually ask</h2>
         </div>
         <div className={styles.faqList}>
           {faqs.map((faq) => (

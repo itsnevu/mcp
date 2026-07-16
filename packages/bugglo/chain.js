@@ -21,7 +21,8 @@
  * that passed. Every helper here returns evidence or it returns null; it never returns a guess.
  */
 
-import { createPublicClient, http, defineChain, getAddress, isAddress } from "viem";
+import { createPublicClient, http, fallback, custom, defineChain, getAddress, isAddress } from "viem";
+import { rpcRequest, isPinned } from "./rpc.js";
 
 export const ROBINHOOD_CHAIN_ID = 4663;
 
@@ -40,17 +41,35 @@ export const robinhoodChain = defineChain({
   rpcUrls: { default: { http: [RPC_URL] } },
 });
 
+/* A viem transport that speaks JSON-RPC through the censorship-resistant path in rpc.js: direct
+   first, DoH-pinned IP if the host's name is DNS-blocked. It carries the fix around DNS filtering
+   (e.g. Indonesia's Trust Positif block of the robinhood.com domain) to EVERY door — the CLI, the
+   MCP server an agent installs, the library in a bot — not just the terminal. */
+function dohTransport() {
+  return custom(
+    { request: ({ method, params }) => rpcRequest(RPC_URL, method, params ?? [], { timeout: RPC_TIMEOUT_MS }) },
+    { key: "doh", name: "DoH-resilient" }
+  );
+}
+
 let client;
 export function chainClient() {
   if (!client) {
-    client = createPublicClient({
-      chain: robinhoodChain,
-      transport: http(RPC_URL, {
-        timeout: RPC_TIMEOUT_MS,
-        retryCount: 1, // one retry; a rug check must not hang a chat turn behind an exponential backoff
-        batch: true, // coalesce the metadata reads into one JSON-RPC batch round-trip
-      }),
+    /* The fast, batched http() path is the primary and stays untouched: any network that is not
+       DNS-blocked pays nothing. viem's fallback only advances to the next transport on a genuine
+       transport error (a revert throws immediately via shouldThrow), so the DoH arm is reached
+       exactly when the direct connection fails — i.e. when the name is blocked.
+       If a bypass was already proven this process (the CLI preflight hit the block and pinned an
+       IP), skip the doomed direct arm and go straight to DoH. */
+    const httpArm = http(RPC_URL, {
+      timeout: RPC_TIMEOUT_MS,
+      retryCount: 1, // one retry; a rug check must not hang a chat turn behind an exponential backoff
+      batch: true, // coalesce the metadata reads into one JSON-RPC batch round-trip
     });
+    const transport = isPinned(new URL(RPC_URL).hostname)
+      ? dohTransport()
+      : fallback([httpArm, dohTransport()], { retryCount: 1 });
+    client = createPublicClient({ chain: robinhoodChain, transport });
   }
   return client;
 }

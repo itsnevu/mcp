@@ -146,8 +146,20 @@ Or pass several endpoints:
 BUGGLO_RPC_URLS=https://rpc.one,https://rpc.two npx bugglo <address>
 ```
 
-If every chain read fails, Bugglo reports `CANNOT CHECK` / `UNKNOWN`. It does not turn an outage into
-a clean verdict.
+### DNS-blocked networks (e.g. Indonesia's Trust Positif filter)
+
+The chain RPC lives on a `robinhood.com` subdomain, and some ISPs block that domain at the DNS
+level — Indonesian networks running the government Trust Positif filter answer the lookup with the
+filter's server instead of the chain. The endpoint is not geo-blocked; only its name is poisoned.
+
+`bugglo` handles this **automatically**. When a direct connection fails, it re-resolves the host over
+DNS-over-HTTPS (which the ISP resolver cannot poison) and connects to the real IP, with TLS SNI and
+certificate validation still pinned to the true hostname. No VPN, no DNS change, no flag, no API key.
+If the DoH resolvers are themselves blocked, fall back to `--rpc`/`ROBINX_RPC_URL` on an unblocked
+domain, or a VPN.
+
+If every path fails, Bugglo reports `CANNOT CHECK` / `UNKNOWN`. It does not turn an outage into a
+clean verdict.
 
 ## What it will not fake
 

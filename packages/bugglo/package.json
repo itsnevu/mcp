@@ -1,6 +1,6 @@
 {
   "name": "bugglo",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Read Robinhood Chain (4663) directly: rug checks, ownership, upgradeable-proxy and privileged-function disclosure. No API key, no account, no backend. Reports UNKNOWN as a first-class result — a check that did not run is never a check that passed.",
   "type": "module",
   "license": "MIT",
@@ -25,6 +25,7 @@
   "files": [
     "cli.js",
     "chain.js",
+    "rpc.js",
     "report.js",
     "README.md"
   ],
