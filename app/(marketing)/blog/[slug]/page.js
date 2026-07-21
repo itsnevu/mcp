@@ -43,7 +43,9 @@ export default async function ArticlePage({ params }) {
             description: article.description,
             path,
             datePublished: article.date,
-            image: `${path}/opengraph-image`,
+            /* og:image is injected automatically by the opengraph-image route with a
+               build-hashed filename; we don't restate it here rather than hard-code a
+               URL that would 404. */
             section: article.sections.map((s) => s.heading),
           }),
           webPageLd({ title: article.title, description: article.description, path }),
