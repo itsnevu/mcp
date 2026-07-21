@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./tile-fonts.css";
 import PwaRegister from "@/components/PwaRegister";
 import JsonLd from "@/components/JsonLd";
 import { APP_NAME } from "@/lib/chatContract";
