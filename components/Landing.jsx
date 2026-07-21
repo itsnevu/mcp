@@ -134,12 +134,14 @@ const VALUES = [
 /* --- Articles data --- */
 const ARTICLES = [
   {
+    slug: "pre-trade-simulation-trader-confidence",
     title: "the invisible power of security: how pre-trade simulation shapes trader confidence",
     img: `${A}/articles/article 1.webp`,
     readTime: "6 minutes",
     author: "Bugglo Research Group",
   },
   {
+    slug: "history-of-honeypots-contract-vulnerability-vectors",
     title: "the history of honeypots: a complete breakdown of contract vulnerability vectors",
     img: `${A}/articles/article 2.webp`,
     readTime: "7 minutes",
@@ -598,7 +600,7 @@ export default function Landing() {
             }}>
               <div className={s.articlesTrack}>
                 {[...ARTICLES, ...ARTICLES, ...ARTICLES, ...ARTICLES].map((art, i) => (
-                  <a key={i} data-article-card="true" className={s.articleCard} href="/docs">
+                  <a key={i} data-article-card="true" className={s.articleCard} href={art.slug ? `/blog/${art.slug}` : "/blog"}>
                     <img src={art.img} alt="" className={s.articleCardImg} draggable="false" style={art.imgStyle || {}} />
                     <div className={s.articleCardOverlay} />
                     <div className={s.articleCardContent}>

@@ -19,6 +19,7 @@ export default function MarketingLayout({ children }) {
           <div className={styles.navLinks}>
             <Link href="/intro">Intro</Link>
             <Link href="/docs">Docs</Link>
+            <Link href="/blog">Blog</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/faq">FAQ</Link>
@@ -48,6 +49,7 @@ export default function MarketingLayout({ children }) {
               <Link href="/app">Try {APP_NAME}</Link>
               <Link href="/intro">Introducing {APP_NAME}</Link>
               <Link href="/docs#pwa">Install as app</Link>
+              <Link href="/blog">Blog</Link>
               <Link href="/faq">FAQ</Link>
               <Link href="/learn">Data usage & Incognito Mode</Link>
             </div>
