@@ -23,7 +23,7 @@ export default function MarketingLayout({ children }) {
             <Link href="/privacy">Privacy</Link>
             <Link href="/faq">FAQ</Link>
           </div>
-          <Link href="/" className={styles.navCta}>
+          <Link href="/app" className={styles.navCta}>
             Try {APP_NAME}
             <span aria-hidden="true" className={styles.arrow}>
               ↗
@@ -45,7 +45,7 @@ export default function MarketingLayout({ children }) {
           <div className={styles.footerCols}>
             <div>
               <h3>Product</h3>
-              <Link href="/">Try {APP_NAME}</Link>
+              <Link href="/app">Try {APP_NAME}</Link>
               <Link href="/intro">Introducing {APP_NAME}</Link>
               <Link href="/docs#pwa">Install as app</Link>
               <Link href="/faq">FAQ</Link>

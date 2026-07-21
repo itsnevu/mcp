@@ -1,19 +1,14 @@
-import AuthGate from "@/components/AuthGate";
-import HoodScopeApp from "@/components/HoodScopeApp";
+import Landing from "@/components/Landing";
 import JsonLd from "@/components/JsonLd";
 import { softwareApplicationLd } from "@/lib/seo";
 
-/* Title, description, canonical and the Open Graph card for "/" are the site-wide
-   defaults, so this route deliberately declares no metadata of its own — restating
-   them would only create a second copy to keep in step with the root layout. What
-   *is* particular to this page is the product entity it serves. */
+/* "/" is now the landing page. The app itself lives at /app, reached via the Login button —
+   AuthGate there is the login screen, and the MCP loads once a session exists. */
 export default function Page() {
   return (
     <>
       <JsonLd data={softwareApplicationLd()} />
-      <AuthGate>
-        <HoodScopeApp />
-      </AuthGate>
+      <Landing />
     </>
   );
 }

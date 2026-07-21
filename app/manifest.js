@@ -13,8 +13,8 @@ export default function manifest() {
     scope: "/",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone", "browser"],
-    background_color: "#0a0a0a",
-    theme_color: "#cbda1b",
+    background_color: "#ffffff",
+    theme_color: "#013EF5",
     orientation: "portrait-primary",
     categories: ["finance", "productivity", "utilities"],
     icons: [

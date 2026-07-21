@@ -1,6 +1,6 @@
 {
   "name": "bugglo-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "mcpName": "io.github.itsnevu/bugglo-mcp",
   "description": "MCP server for Robinhood Chain (4663). Rug checks, ownership, upgradeable-proxy and privileged-function disclosure, read straight from the chain. No API key, no account, no backend. Reports UNKNOWN as a first-class result — a check that did not run is never a check that passed.",
   "type": "module",
@@ -46,7 +46,7 @@
   "//": "zod is declared explicitly even though the MCP SDK also depends on it. robinx-mcp imports zod without declaring it and survives only because npm hoists it — under pnpm's strict layout that install is broken. Do not copy that.",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "bugglo": "^0.2.0",
+    "bugglo": "^0.3.0",
     "zod": "^4.0.0"
   }
 }

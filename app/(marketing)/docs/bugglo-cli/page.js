@@ -615,7 +615,7 @@ import { renderRugCheck, renderOneLine } from "bugglo/report";`}</Code>
               , and the app built on it is one click away.
             </p>
           </div>
-          <Link href="/" className={styles.cta}>
+          <Link href="/app" className={styles.cta}>
             Try {APP_NAME}
             <span aria-hidden="true">↗</span>
           </Link>

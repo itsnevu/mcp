@@ -32,7 +32,7 @@ function hexToRgb(hex) {
   const clean = String(hex || "").trim().replace("#", "");
   const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
   const n = parseInt(full, 16);
-  if (Number.isNaN(n) || full.length !== 6) return [203, 218, 27]; // brand lime, if the var is missing
+  if (Number.isNaN(n) || full.length !== 6) return [1, 62, 245]; // brand blue, if the var is missing
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 

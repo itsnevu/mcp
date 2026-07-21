@@ -844,7 +844,7 @@ console.log(data.source, data.reply);`}</Code>
               tools, fund a dedicated low-balance wallet — never your main one.
             </p>
           </div>
-          <Link href="/" className={styles.cta}>
+          <Link href="/app" className={styles.cta}>
             Try {APP_NAME}
             <span aria-hidden="true">↗</span>
           </Link>

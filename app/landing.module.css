@@ -1,0 +1,264 @@
+/* Landing page — the entry before the MCP app. Style language (floating blur pill-nav, oversized
+   display headline with a serif-italic accent, generous whitespace, soft route fade-in) is inspired
+   by modern studio sites; every asset and word here is Bugglo's own. */
+
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #0e1222;
+  font-family: 'Velique', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: clip;
+  position: relative;
+  animation: routeFadeIn 1200ms ease both;
+}
+
+@keyframes routeFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.serif {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* ── Floating pill nav ─────────────────────────────────────────────────────── */
+.nav {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: 440px;
+  max-width: calc(100% - 24px);
+}
+
+.navShell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 24px rgba(1, 62, 245, 0.08), 0 1px 0 rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(1, 62, 245, 0.08);
+  transition: box-shadow 350ms;
+}
+
+.navRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+}
+.brandLogo { border-radius: 7px; display: block; }
+.brandName {
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 1;
+  color: #013EF5;
+  letter-spacing: -0.01em;
+}
+
+.navRight { display: flex; align-items: center; gap: 12px; }
+
+.loginBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: #013EF5;
+  color: #ffffff;
+  padding: 0 22px;
+  height: 36px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: filter 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.loginBtn:hover { filter: brightness(1.12); transform: translateY(-1px) scale(1.03); }
+
+.menuToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: 34px;
+  line-height: 0;
+  color: #7f7f7f;
+  transition: color 300ms, transform 400ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.menuToggle:hover { color: #013EF5; }
+.menuToggle.open { transform: rotate(45deg); color: #013EF5; }
+
+/* Expandable panel */
+.menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 320ms cubic-bezier(0.65, 0, 0.35, 1), opacity 240ms ease;
+}
+.menu.open { max-height: 320px; opacity: 1; }
+
+.menuLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px 8px;
+  border-top: 1px solid rgba(1, 62, 245, 0.10);
+  color: #0e1222;
+  font-size: 19px;
+  text-decoration: none;
+  transition: color 200ms, padding-left 220ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.menuLink:hover { color: #013EF5; padding-left: 16px; }
+.menuLink span[aria-hidden] { opacity: 0; transform: translateX(-6px); transition: opacity 180ms, transform 180ms; font-size: 24px; }
+.menuLink:hover span[aria-hidden] { opacity: 1; transform: translateX(0); }
+
+/* ── Hero ───────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0 clamp(24px, 7vw, 120px);
+}
+
+.heroInner { position: relative; z-index: 2; max-width: 900px; }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #013EF5;
+  margin-bottom: 22px;
+}
+.eyebrowDot { width: 8px; height: 8px; border-radius: 50%; background: #013EF5; }
+
+.headline {
+  font-size: clamp(52px, 9vw, 128px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  margin: 0;
+  color: #0e1222;
+}
+
+.subline {
+  margin-top: 26px;
+  font-size: clamp(18px, 2.2vw, 24px);
+  line-height: 1.4;
+  color: #454b5e;
+  max-width: 620px;
+}
+
+.ctaRow { margin-top: 40px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #013EF5;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 30px;
+  height: 54px;
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ctaPrimary:hover { filter: brightness(1.12); transform: translateY(-2px) scale(1.02); }
+.ctaArrow { font-size: 20px; }
+
+.ctaGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #0e1222;
+  border: 1px solid rgba(1, 62, 245, 0.25);
+  border-radius: 10px;
+  padding: 0 26px;
+  height: 54px;
+  font-size: 17px;
+  font-weight: 500;
+  text-decoration: none;
+  background: transparent;
+  transition: border-color 250ms, color 250ms, background 250ms;
+}
+.ctaGhost:hover { border-color: #013EF5; color: #013EF5; background: rgba(1, 62, 245, 0.04); }
+
+/* Rotated brand tile artwork — Bugglo's own logo, echoing the "floating tile" motif. */
+.heroArt {
+  position: absolute;
+  top: -12vh;
+  right: -10vh;
+  width: clamp(360px, 52vw, 820px);
+  height: auto;
+  transform: rotate(-15deg);
+  transform-origin: top right;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 40px 80px rgba(1, 62, 245, 0.28));
+  border-radius: 18%;
+  opacity: 0.96;
+  animation: floatArt 9s ease-in-out infinite;
+}
+@keyframes floatArt {
+  0%, 100% { transform: rotate(-15deg) translateY(0); }
+  50%      { transform: rotate(-15deg) translateY(-18px); }
+}
+
+.footNote {
+  position: absolute;
+  bottom: 26px;
+  left: clamp(24px, 7vw, 120px);
+  z-index: 2;
+  font-size: 13px;
+  color: #9aa0b0;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 760px) {
+  .heroArt { top: auto; bottom: -6vh; right: -22vw; opacity: 0.5; width: 92vw; }
+  .subline { color: #3b4256; }
+  .footNote { display: none; }
+}

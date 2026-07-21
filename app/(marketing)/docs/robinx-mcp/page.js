@@ -725,7 +725,7 @@ ROBINX_MAX_USD_PER_CALL=0.10          # the ceiling on any single call`}</Code>
               . Or skip both and go ask it something with money on the line.
             </p>
           </div>
-          <Link href="/" className={styles.cta}>
+          <Link href="/app" className={styles.cta}>
             Try {APP_NAME}
             <span aria-hidden="true">↗</span>
           </Link>

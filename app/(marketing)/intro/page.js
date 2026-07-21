@@ -110,7 +110,7 @@ export default function IntroPage() {
           {APP_NAME} is an agentic AI for {CHAIN_NAME} intelligence — the apex predator of on-chain research. It doesn&apos;t guess: it plans, calls live on-chain tools, and answers with mathematically verified evidence.
         </p>
         <div className={styles.ctaRow}>
-          <Link href="/" className={shell.primaryCta}>
+          <Link href="/app" className={shell.primaryCta}>
             Try {APP_NAME}
             <span aria-hidden="true" className={shell.arrow}>
               ↗
@@ -236,7 +236,7 @@ export default function IntroPage() {
           <Link href="/docs/bugglo-cli">Read the CLI docs</Link>.
         </p>
         <div className={styles.ctaRowLeft}>
-          <Link href="/" className={shell.primaryCta}>
+          <Link href="/app" className={shell.primaryCta}>
             Try {APP_NAME}
             <span aria-hidden="true" className={shell.arrow}>
               ↗

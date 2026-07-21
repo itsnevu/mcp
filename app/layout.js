@@ -91,8 +91,8 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#cbda1b",
-  colorScheme: "dark light",
+  themeColor: "#013EF5",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -109,7 +109,7 @@ export default function RootLayout({ children }) {
        crawler receives is the English one — the translations are applied on the
        client and a crawler sends no language cookie — so any other value here
        would be a claim about the document that the document does not honour. */
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
         {/* Warms DNS and TLS for the Google Identity script before the auth gate
             gets around to asking for it. */}

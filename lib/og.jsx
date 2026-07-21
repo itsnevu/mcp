@@ -7,8 +7,11 @@ import { OG_LOGO_DATA_URI } from "./ogLogo";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const ACCENT = "#cbda1b";
-const BACKGROUND = "#0a0a0a";
+const ACCENT = "#013EF5";
+const BACKGROUND = "#ffffff";
+const INK = "#0e1222";
+const INK_SOFT = "#6a7180";
+const HAIRLINE = "#dde1ee";
 
 /* Satori (what renders this) implements a flexbox subset — no grid, no cascade,
    and every element holding more than one child needs an explicit display. Styles
@@ -40,7 +43,7 @@ export function ogImage({ eyebrow, title, subtitle }) {
             height: "620px",
             borderRadius: "50%",
             background: ACCENT,
-            opacity: 0.14,
+            opacity: 0.10,
             display: "flex",
           }}
         />
@@ -63,7 +66,7 @@ export function ogImage({ eyebrow, title, subtitle }) {
               display: "flex",
               fontSize: "30px",
               fontWeight: 700,
-              color: "#ffffff",
+              color: INK,
               letterSpacing: "-0.01em",
             }}
           >
@@ -92,7 +95,7 @@ export function ogImage({ eyebrow, title, subtitle }) {
               display: "flex",
               fontSize: title.length > 34 ? "64px" : "78px",
               fontWeight: 800,
-              color: "#ffffff",
+              color: INK,
               lineHeight: 1.08,
               letterSpacing: "-0.03em",
               maxWidth: "980px",
@@ -106,7 +109,7 @@ export function ogImage({ eyebrow, title, subtitle }) {
               style={{
                 display: "flex",
                 fontSize: "30px",
-                color: "#a1a1a1",
+                color: INK_SOFT,
                 lineHeight: 1.35,
                 maxWidth: "940px",
               }}
@@ -121,10 +124,10 @@ export function ogImage({ eyebrow, title, subtitle }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderTop: "1px solid #262626",
+            borderTop: `1px solid ${HAIRLINE}`,
             paddingTop: "28px",
             fontSize: "24px",
-            color: "#737373",
+            color: INK_SOFT,
           }}
         >
           <div style={{ display: "flex" }}>Built on {CHAIN_NAME}</div>

@@ -230,9 +230,9 @@ export default function AuthGate({ children }) {
         alignItems: 'center',
         minHeight: '100vh',
         minHeight: '100dvh',
-        /* must stay equal to the lime baked into logo-128.png, or the logo's own
+        /* must stay equal to the royal blue baked into logo-128.png, or the logo's own
            background reads as a visible square against the splash */
-        background: '#C7D903',
+        background: '#013EF5',
         margin: 0
       }}>
         <Image

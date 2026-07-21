@@ -42,6 +42,9 @@ import {
   scanPowers,
 } from "bugglo/chain";
 import { renderRugCheck } from "bugglo/report";
+import { simulateSell } from "bugglo/simulate";
+import { tradeGate } from "bugglo/gate";
+import { verifyAgainstRegistry, officialList, REGISTRY_META } from "bugglo/registry";
 
 const log = (...args) => console.error("[bugglo-mcp]", ...args); // stderr only. See the header.
 
@@ -362,9 +365,94 @@ tool(
     })
 );
 
+/* ── Bugglo Firewall — the pre-trade policy gate (the enforcer) ───────────────────────────────
+ *
+ * The rest of the tools describe a contract. These three DECIDE — they are what turns Bugglo from an
+ * advisor an agent can ignore into a gate an agent must pass before it swaps. An AI agent with a
+ * wallet is the softest target in DeFi: it acts on injected instructions and cannot see a chain it
+ * never read. The safety check belongs OUTSIDE the model. That is this. */
+
+const GATE_ARG = {
+  address: z
+    .string()
+    .describe("Token address on Robinhood Chain (0x + 40 hex) the agent is about to trade. NOT an Ethereum address."),
+  side: z
+    .enum(["buy", "sell"])
+    .optional()
+    .describe("Which side the agent intends. Optional; defaults to 'buy'."),
+};
+
+tool(
+  "bugglo_trade_gate",
+  {
+    title: "Pre-trade firewall: ALLOW / BLOCK / UNKNOWN before any swap",
+    description:
+      "THE GATE AN AGENT MUST CALL BEFORE TRADING a token on Robinhood Chain (4663). Composes the full " +
+      "rug check, a read-only SELL SIMULATION (proves the tokens can even be moved into the pool — catches " +
+      "honeypots that let you buy but not sell), a liquidity floor, and an RWA impostor check against the " +
+      "official Robinhood stock-token registry, into ONE machine-readable decision with reasons worst-first. " +
+      "ALLOW = no blocker was proven (NOT 'safe'). BLOCK = a concrete danger was found (honeypot, impostor " +
+      "stock token, failed check). UNKNOWN = safety could not be proven — the agent MUST treat this like " +
+      "BLOCK for auto-execution and escalate to a human. A firewall fails CLOSED. This is the tool that " +
+      "stops an agent being talked into buying a honeypot.",
+    inputSchema: GATE_ARG,
+  },
+  async ({ address, side }) => {
+    const parsed = parseAddress(address);
+    if (parsed.error) return asError(parsed.error);
+    return asJson(await tradeGate(parsed.address, { side }));
+  }
+);
+
+tool(
+  "bugglo_simulate_sell",
+  {
+    title: "Read-only sell simulation (honeypot transfer probe)",
+    description:
+      "Simulates the first, load-bearing step of a sell on Robinhood Chain — moving the tokens into the DEX " +
+      "pool — using a read-only eth_call with a state override that funds a synthetic holder. No key, no gas, " +
+      "no real funds touched. Returns CANNOT-MOVE (transfer reverts or returns false — a hard honeypot " +
+      "signal), SELLABLE-SO-FAR (the tokens can move; NOT proof you can fully exit, since the swap and any " +
+      "sell tax are not measured), or UNKNOWN (node has no state overrides, balance slot not found, or no " +
+      "pool). UNKNOWN is never PASS. This finally builds the honeypot simulation the rug check lists as " +
+      "not-yet-built.",
+    inputSchema: ADDRESS_ARG,
+  },
+  async ({ address }) => {
+    const parsed = parseAddress(address);
+    if (parsed.error) return asError(parsed.error);
+    return asJson(await simulateSell(parsed.address));
+  }
+);
+
+tool(
+  "bugglo_rwa_verify",
+  {
+    title: "Is this the OFFICIAL tokenized stock, or an impostor?",
+    description:
+      "Verifies an address against the pinned official Robinhood Chain stock-token registry. Returns OFFICIAL " +
+      "(byte-for-byte an issuer address), IMPOSTOR-SUSPECT (a DIFFERENT address wearing a ticker/name the " +
+      "official token owns — e.g. a fake 'AAPL'), or NOT-IN-REGISTRY (no official record; the registry is " +
+      "partial, so this is neither a red flag nor a pass). The chain is permissionless — anyone can mint an " +
+      "ERC-20 named after a real stock — so this is how an agent avoids buying a counterfeit tokenized equity. " +
+      "Reads the token's on-chain symbol/name to catch ticker collisions.",
+    inputSchema: ADDRESS_ARG,
+  },
+  async ({ address }) => {
+    const parsed = parseAddress(address);
+    if (parsed.error) return asError(parsed.error);
+    const metadata = await getTokenMetadata(parsed.address);
+    return asJson({
+      address: parsed.address,
+      registry: REGISTRY_META,
+      ...verifyAgainstRegistry(parsed.address, metadata),
+    });
+  }
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
-log(`ready — 7 tools, Robinhood Chain ${ROBINHOOD_CHAIN_ID}, no API key required`);
+log(`ready — 10 tools, Robinhood Chain ${ROBINHOOD_CHAIN_ID}, no API key required`);
 
 /* Deliberately NOT awaited: the MCP handshake must not wait on an 8-second network probe. The
    client gets its tool list immediately; the RPC verdict lands on stderr a moment later. */
