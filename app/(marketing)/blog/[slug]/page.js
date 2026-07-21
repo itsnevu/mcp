@@ -12,8 +12,9 @@ export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
 }
 
-export function generateMetadata({ params }) {
-  const article = getArticle(params.slug);
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const article = getArticle(slug);
   if (!article) return {};
   return pageMetadata({
     absoluteTitle: `${article.title} | ${APP_NAME}`,
@@ -26,8 +27,9 @@ export function generateMetadata({ params }) {
   });
 }
 
-export default function ArticlePage({ params }) {
-  const article = getArticle(params.slug);
+export default async function ArticlePage({ params }) {
+  const { slug } = await params;
+  const article = getArticle(slug);
   if (!article) notFound();
 
   const path = `/blog/${article.slug}`;

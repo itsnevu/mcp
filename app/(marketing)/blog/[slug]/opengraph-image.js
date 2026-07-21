@@ -9,8 +9,9 @@ export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
 }
 
-export default function Image({ params }) {
-  const article = getArticle(params.slug);
+export default async function Image({ params }) {
+  const { slug } = await params;
+  const article = getArticle(slug);
   return ogImage({
     eyebrow: "Bugglo Research Group",
     title: article ? article.title : "Research & security writing",
