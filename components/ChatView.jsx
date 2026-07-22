@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Widget from "./Widgets";
 import { renderRich, fmtTime, replyToText } from "@/lib/text";
 import { useI18n } from "@/lib/I18nContext";
@@ -109,14 +109,6 @@ function AgentMessage({ msg, animate, onStart, abortRef, onDone, showToast, scro
   );
 }
 
-const MODELS = [
-  { id: "Bugglo V1", descKey: "model.buggloV1.desc" },
-  { id: "Bugglo Pro", descKey: "model.buggloPro.desc" },
-  { id: "RobinX", descKey: "model.robinx.desc" },
-  { id: "Fable", descKey: "model.fable.desc" },
-  { id: "GPT-4o", descKey: "model.gpt4o.desc" },
-];
-
 export default function ChatView({
   messages,
   awaiting,
@@ -127,44 +119,15 @@ export default function ChatView({
   scrollBottom,
 }) {
   const { t } = useI18n();
-  const [modelOpen, setModelOpen] = useState(false);
-  const [activeModel, setActiveModel] = useState("Bugglo V1");
-  const modelRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (modelRef.current && !modelRef.current.contains(e.target)) {
-        setModelOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <div className="chat-wrap">
-      <div className="model-selector-wrap" ref={modelRef}>
-        <button className="model-btn" onClick={() => setModelOpen(!modelOpen)}>
-          {activeModel}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        {modelOpen && (
-          <div className="model-popover">
-            {MODELS.map(m => (
-              <button 
-                key={m.id} 
-                className={"model-item" + (activeModel === m.id ? " active" : "")}
-                onClick={() => { setActiveModel(m.id); setModelOpen(false); }}
-              >
-                <div className="model-item-title">
-                  {m.id}
-                  {activeModel === m.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: "var(--accent)"}}><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-                <div className="model-item-desc">{t(m.descKey)}</div>
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Static brand chip. The engine and its routing (Auto/Fast/Deep) are chosen by the
+          mode control in InputBar and pinned server-side (see assertPinnedModel in
+          lib/liveAgent.js); there is no user-selectable model, so we do not render a
+          picker that cannot change anything. */}
+      <div className="model-selector-wrap">
+        <span className="model-btn model-btn-static">Bugglo V1</span>
       </div>
 
       {messages.map((m) =>

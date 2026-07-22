@@ -257,7 +257,7 @@ export default function Sidebar({
         <div className="section-label">{t("sidebar.recent")}</div>
         <div>
           {activeId === null && (
-            <div className="side-item recent-item active" role="button" tabIndex={0}>
+            <div className="side-item recent-item active" aria-current="page">
               <svg viewBox="0 0 24 24">
                 <use href="#i-chat" />
               </svg>

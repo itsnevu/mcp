@@ -36,7 +36,7 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-export default function VoiceMode({ open, onClose, onSend, showToast }) {
+export default function VoiceMode({ open, onClose, onSend }) {
   const { t, activeLang } = useI18n();
 
   const [phase, setPhase] = useState("idle"); // idle | listening | thinking | speaking | error
@@ -441,11 +441,11 @@ export default function VoiceMode({ open, onClose, onSend, showToast }) {
   if (!open) return null;
 
   const statusKey =
-    phase === "listening"
-      ? muted
-        ? "voice.status.muted"
-        : "voice.status.listening"
-      : phase === "thinking"
+    muted
+      ? "voice.status.muted"
+      : phase === "listening"
+        ? "voice.status.listening"
+        : phase === "thinking"
         ? "voice.status.thinking"
         : phase === "speaking"
           ? "voice.status.speaking"

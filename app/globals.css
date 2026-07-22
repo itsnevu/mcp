@@ -1617,6 +1617,13 @@ button, input, textarea, select { font-family: inherit; }
 .model-btn:hover {
   background: var(--bg-card-hover);
 }
+/* Static brand chip — not interactive, so no pointer/hover affordance. */
+.model-btn-static {
+  cursor: default;
+}
+.model-btn-static:hover {
+  background: transparent;
+}
 .model-btn svg {
   width: 18px;
   height: 18px;

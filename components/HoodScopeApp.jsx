@@ -727,7 +727,7 @@ export default function HoodScopeApp() {
         theme={theme}
         onThemeChange={applyTheme}
       />
-      <VoiceMode open={voiceOpen} onClose={closeVoice} onSend={voiceSend} showToast={showToast} />
+      <VoiceMode open={voiceOpen} onClose={closeVoice} onSend={voiceSend} />
       {/* Home only: in a conversation the bottom of the screen belongs to the input dock, and a
           banner parked on top of the composer is an obstacle, not an announcement. Every load
           starts on home (activeId is null), so a first-time user still meets it. */}
