@@ -1,4 +1,4 @@
-const CACHE_NAME = "hoodscope-pwa-v4";
+const CACHE_NAME = "hoodscope-pwa-v5";
 const APP_SHELL = [
   "/",
   "/offline",
