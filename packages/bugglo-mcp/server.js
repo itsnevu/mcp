@@ -42,7 +42,7 @@ import {
   scanPowers,
 } from "bugglo/chain";
 import { renderRugCheck } from "bugglo/report";
-import { simulateSell } from "bugglo/simulate";
+import { simulateSell, simulateExit } from "bugglo/simulate";
 import { tradeGate } from "bugglo/gate";
 import { verifyAgainstRegistry, officialList, REGISTRY_META } from "bugglo/registry";
 
@@ -422,6 +422,30 @@ tool(
     const parsed = parseAddress(address);
     if (parsed.error) return asError(parsed.error);
     return asJson(await simulateSell(parsed.address));
+  }
+);
+
+tool(
+  "bugglo_simulate_exit",
+  {
+    title: "Read-only FULL exit simulation (does a sell actually clear?)",
+    description:
+      "The stronger half of bugglo_simulate_sell. That tool proves the tokens can MOVE into the pool; this " +
+      "one executes the whole sell and measures what actually comes back, so it also catches a sell tax the " +
+      "pool will not accept and a pool that takes the tokens and refuses to pay. Works by injecting a probe " +
+      "contract into a single read-only eth_call via a code state override and paying Uniswap V3's swap " +
+      "callback with a real transfer, letting the pool's own accounting be the judge. No key, no gas, no " +
+      "transaction, nothing deployed. Returns EXIT-CLEARS (a sell completed and value came back — at this " +
+      "block, at this size, for a synthetic holder; NOT a promise about you later), CANNOT-EXIT (the swap " +
+      "reverted — a hard signal against exiting), or UNKNOWN (no V3 pool, a Uniswap V4 pool id, no state " +
+      "overrides, balance slot not found, or a probe that did not answer in its expected shape). UNKNOWN is " +
+      "never PASS. Prefer this over bugglo_simulate_sell when deciding whether a position can be exited.",
+    inputSchema: ADDRESS_ARG,
+  },
+  async ({ address }) => {
+    const parsed = parseAddress(address);
+    if (parsed.error) return asError(parsed.error);
+    return asJson(await simulateExit(parsed.address));
   }
 );
 

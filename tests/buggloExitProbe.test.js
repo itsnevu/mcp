@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { spawnSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
 
 /* The full-exit simulation. simulateSell() proves tokens can MOVE; simulateExit() proves a sell
    actually CLEARS, by injecting BuggloExitProbe's runtime bytecode into an eth_call and paying the
@@ -196,5 +198,46 @@ describe("EXIT_PROBE_RUNTIME", () => {
     const bytes = (EXIT_PROBE_RUNTIME.length - 2) / 2;
     expect(bytes).toBeGreaterThan(500);
     expect(bytes).toBeLessThan(6000);
+  });
+});
+
+/* The two doors onto simulateExit. Neither test touches the network: the CLI ones assert on help
+   and on argument handling that fails before any RPC, and the MCP one reads the server source
+   rather than booting a stdio server. What they guard is that the exit simulation is actually
+   REACHABLE — a check nobody can run is a check that does not exist. */
+describe("simulateExit entry points", () => {
+  const cli = "packages/bugglo/cli.js";
+  const run = (args) =>
+    spawnSync(process.execPath, [cli, ...args], { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, NO_COLOR: "1" } });
+
+  it("the CLI advertises the exit command and its exit-code contract", () => {
+    const result = run(["--help"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("bugglo exit <address>");
+    // The gating rule is the whole reason it is in the CLI; it must be documented where it is read.
+    expect(result.stdout).toMatch(/UNKNOWN both return 1/);
+  });
+
+  it("the CLI rejects a malformed address for exit without reporting a pass", () => {
+    const result = run(["exit", "not-an-address"]);
+    expect(result.status).not.toBe(0);
+    /* Not asserting on the string "EXIT-CLEARS": the help text names it while documenting the
+       exit-code contract, so a malformed address that prints usage contains it legitimately.
+       What must never appear is the sentence that reports a measured, successful exit. */
+    expect(result.stdout + result.stderr).not.toMatch(/completed a full sell/);
+  });
+
+  it("the MCP server exposes bugglo_simulate_exit and imports it", () => {
+    const source = readFileSync("packages/bugglo-mcp/server.js", "utf8");
+    expect(source).toContain('"bugglo_simulate_exit"');
+    expect(source).toMatch(/import \{[^}]*simulateExit[^}]*\} from "bugglo\/simulate"/);
+    // The description has to carry the UNKNOWN rule, because for an agent the description IS the docs.
+    expect(source).toMatch(/UNKNOWN is\s+"?\s*\+?\s*"?never PASS/);
+  });
+
+  it("ships the probe source so the injected bytecode can be audited, not trusted", () => {
+    const manifest = JSON.parse(readFileSync("packages/bugglo/package.json", "utf8"));
+    expect(manifest.files).toContain("BuggloExitProbe.sol");
+    expect(existsSync("packages/bugglo/BuggloExitProbe.sol")).toBe(true);
   });
 });

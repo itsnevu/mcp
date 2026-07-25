@@ -9,6 +9,7 @@ npm-debug.log*
 # marketing drafts — not part of the product
 x.txt
 ARTICLE.md
+ARTICLE.txt
 
 # scraped third-party site assets — not ours to redistribute
 public/www.tile.pt/

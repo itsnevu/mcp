@@ -10,7 +10,10 @@ const DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_CHAIN_ID = 4663;
 const CHAIN_ID_HEX = `0x${ROBINHOOD_CHAIN_ID.toString(16)}`;
 
-const COMMANDS = new Set(["rug", "rug-check", "check", "info", "token", "ownership", "owner", "proxy", "powers", "market", "limits"]);
+const COMMANDS = new Set([
+  "rug", "rug-check", "check", "info", "token", "ownership", "owner", "proxy", "powers", "market", "limits",
+  "exit", "sell",
+]);
 
 function usage() {
   return `bugglo ${VERSION}
@@ -25,7 +28,12 @@ Usage
   bugglo proxy <address>           EIP-1967 upgradeable-proxy check
   bugglo powers <address>          Privileged function selectors in bytecode
   bugglo market <address>          DexScreener liquidity and trading data
+  bugglo exit <address>            Can a sell actually clear? Read-only full-exit simulation
   bugglo limits                    Checks Bugglo cannot measure
+
+  exit returns code 0 only on EXIT-CLEARS, so a script can gate on it. CANNOT-EXIT
+  and UNKNOWN both return 1: a sell that could not be proven must be treated exactly
+  like one proven to fail, before anything auto-executes.
 
 Options
   --json                           Print machine-readable JSON
@@ -41,6 +49,7 @@ Options
 Examples
   npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
   npx bugglo --json market 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
+  npx bugglo exit 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1 || echo "do not buy"
   npx bugglo --rpc https://your-rpc.example rug 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
   npx bugglo --rpc-list https://rpc.one,https://rpc.two 0x...
 
@@ -109,6 +118,7 @@ function parseArgs(argv) {
 
   if (opts.command === "rug-check" || opts.command === "check") opts.command = "rug";
   if (opts.command === "token") opts.command = "info";
+  if (opts.command === "sell") opts.command = "exit";
   if (opts.command === "owner") opts.command = "ownership";
 
   return opts;
@@ -277,6 +287,30 @@ async function main() {
     if (opts.json) printJson(result);
     else console.log(report.renderRugCheck(result, { full: opts.full, paint: outputPaint }));
     if (result.ok === false || result.verdict === "CANNOT CHECK") process.exitCode = 1;
+    return;
+  }
+
+  /* The exit simulation, at the terminal. Exit code is the point of putting it here: a shell
+   * script can gate a buy on it. Only EXIT-CLEARS exits 0 — CANNOT-EXIT and UNKNOWN both exit 1,
+   * because "we could not prove you can get out" and "you cannot get out" must lead to the same
+   * action before anything auto-executes. Same rule as everything else here: UNKNOWN is not PASS. */
+  if (opts.command === "exit") {
+    const { simulateExit } = await import("./simulate.js");
+    const result = await simulateExit(address);
+
+    if (opts.json) {
+      printJson({ ...common, ...result });
+    } else if (result.ok === false) {
+      console.log(`BUGGLO — exit simulation\n\nUNKNOWN  ${result.error}`);
+    } else {
+      console.log("BUGGLO — exit simulation");
+      console.log(`${opts.full ? address : `${address.slice(0, 6)}…${address.slice(-4)}`}\n`);
+      console.log(`${String(result.status).padEnd(12)} ${result.received ? `received ${result.received}` : ""}`.trimEnd());
+      console.log(`\n${result.note}`);
+      console.log("\nA simulation that could not run is not a simulation that passed.");
+    }
+
+    if (result.ok === false || result.status !== "EXIT-CLEARS") process.exitCode = 1;
     return;
   }
 
