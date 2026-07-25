@@ -87,7 +87,7 @@ const mcpTools = [
   },
 ];
 
-/* The three checks that are always disclosed as unmeasured, and the honest reason
+/* The checks that are always disclosed as unmeasured, and the honest reason
    for each. This list is the product. Delete it and bugglo becomes every other
    scanner that turns silence into a green tick. */
 const unmeasured = [
@@ -98,10 +98,6 @@ const unmeasured = [
   {
     check: "Liquidity lock",
     why: "Needs a known locker registry. This chain has none — so from here, a locked pool and an unlocked one look identical.",
-  },
-  {
-    check: "Honeypot sell simulation",
-    why: "Needs a simulated sell from a real holder through the router. Bugglo does not run that read today. A passing market check is not proof you can exit.",
   },
 ];
 
@@ -120,7 +116,7 @@ const faqs = [
   },
   {
     question: "Why does it say UNKNOWN instead of just passing the token?",
-    answer: "Because a check that did not run is never a check that passed. Holder concentration, liquidity lock, and honeypot sell simulation cannot be measured from a bare RPC on this chain today, and rounding those unknowns up into a clean verdict is exactly the failure this package exists to prevent. There is no numeric risk score either — a score built from four measured signals and three unknowns launders ignorance into confidence.",
+    answer: "Because a check that did not run is never a check that passed. Holder concentration and liquidity lock cannot be measured from a bare RPC on this chain today, and sellability can still return UNKNOWN when the pool or RPC cannot support a full read-only exit simulation. Rounding those unknowns up into a clean verdict is exactly the failure this package exists to prevent. There is no numeric risk score either — a score built from measured signals and open unknowns launders ignorance into confidence.",
   },
   {
     question: "Can my own AI agent call it?",
@@ -423,13 +419,13 @@ VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
           renounced — the contract may use roles or an embedded admin that I cannot see.
   PASS    Contract exists
           4,830 bytes of bytecode on Robinhood Chain (chain 4663).
-  PASS    Sells are going through
-          People are getting out, so it is not a hard honeypot.
+  PASS    Full exit simulation cleared
+          A funded synthetic holder completed a full sell through the pool and
+          received value back. Not a promise.
 
 NOT CHECKED — these are not passes
   holder concentration
-  liquidity lock
-  honeypot / sell simulation`}</Code>
+  liquidity lock`}</Code>
 
         <div className={styles.grid} style={{ marginTop: 18 }}>
           <div className={styles.card}>
@@ -443,7 +439,7 @@ NOT CHECKED — these are not passes
           <div className={styles.card}>
             <h3>No numeric risk score</h3>
             <p>
-              A score computed from four measured signals and three unknowns is a number that
+              A score computed from measured signals and open unknowns is a number that
               launders ignorance into false confidence, and people size positions off it. So there
               isn&apos;t one.
             </p>
@@ -471,7 +467,7 @@ NOT CHECKED — these are not passes
       <section className={styles.section} id="limits">
         <div className={styles.sectionHead}>
           <div className={styles.eyebrow}>The honest part</div>
-          <h2 className={styles.sectionTitle}>Three things it will never fake</h2>
+          <h2 className={styles.sectionTitle}>Things it will never fake</h2>
           <p className={styles.lead}>
             These are printed as unmeasured on every report — including the clean ones. Run{" "}
             <code className={styles.inline}>bugglo limits</code> to get them on their own.

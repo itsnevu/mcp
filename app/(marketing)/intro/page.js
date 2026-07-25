@@ -224,7 +224,7 @@ export default function IntroPage() {
           The rug-check engine also ships without us in the path. It is on npm as{" "}
           <code className={styles.inlineCode}>bugglo</code>: one command, no account, no API
           key, no backend — it reads {CHAIN_NAME} straight from your own machine and prints
-          the three checks it could not run alongside the ones it could.
+          the checks it could not run alongside the ones it could.
         </p>
         <pre className={styles.installBlock}>
           <code>npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1</code>

@@ -4,7 +4,7 @@
  * swaps. Advisor → enforcer.
  *
  * This is not a new engine. It composes the SAME rugCheck() every door already uses, adds the
- * read-only sell simulation and the RWA registry check, and turns them into ONE machine-readable
+ * read-only full-exit simulation and the RWA registry check, and turns them into ONE machine-readable
  * decision: ALLOW / BLOCK / UNKNOWN, worst reason first.
  *
  * THE DECISION RULE — and why UNKNOWN is a first-class outcome, not a soft ALLOW.
@@ -17,7 +17,7 @@
  */
 
 import { rugCheck } from "./chain.js";
-import { simulateSell } from "./simulate.js";
+import { simulateExit } from "./simulate.js";
 import { verifyAgainstRegistry } from "./registry.js";
 
 const DEFAULTS = {
@@ -41,7 +41,7 @@ const SEV_ORDER = { BLOCK: 0, WARN: 1, UNKNOWN: 2, INFO: 3 };
  *     address, chain, chainId, side,
  *     reasons: [{ severity, code, message }],   // worst first
  *     rug: { verdict, signals },                // the underlying rug check, unabridged
- *     sellSimulation: {...},
+ *     exitSimulation: {...},
  *     rwa: {...},
  *     policy, disclaimer,
  *   }
@@ -50,7 +50,7 @@ export async function tradeGate(rawAddress, opts = {}) {
   const side = opts.side === "sell" ? "sell" : "buy";
   const policy = { ...DEFAULTS, ...(opts.policy || {}) };
 
-  const [rug, sell] = await Promise.all([rugCheck(rawAddress), simulateSell(rawAddress)]);
+  const [rug, exit] = await Promise.all([rugCheck(rawAddress), simulateExit(rawAddress)]);
 
   if (rug.ok === false) {
     return {
@@ -60,6 +60,7 @@ export async function tradeGate(rawAddress, opts = {}) {
       side,
       reasons: [{ severity: "UNKNOWN", code: "bad-input", message: rug.error }],
       rug: null,
+      exitSimulation: null,
       sellSimulation: null,
       rwa: null,
       policy,
@@ -69,7 +70,7 @@ export async function tradeGate(rawAddress, opts = {}) {
 
   const reasons = [];
   let hardBlock = false; // a proven danger → BLOCK
-  let sellProven = false; // the sell simulation actually ran AND passed → the thing ALLOW hinges on
+  let sellProven = false; // the full-exit simulation actually ran AND passed → the thing ALLOW hinges on
 
   /* ── The rug check's own verdict feeds straight in ─────────────────────────────────────────── */
   if (rug.verdict === "NOT A CONTRACT") {
@@ -97,16 +98,16 @@ export async function tradeGate(rawAddress, opts = {}) {
     reasons.push({ severity: "UNKNOWN", code: `rug:${s.key}`, message: `${s.label}: ${s.detail}` });
   }
 
-  /* ── Sell simulation — the enforcer's teeth ────────────────────────────────────────────────── */
-  if (sell?.ok && sell.status === "CANNOT-MOVE") {
+  /* ── Full-exit simulation — the enforcer's teeth ───────────────────────────────────────────── */
+  if (exit?.ok && exit.status === "CANNOT-EXIT") {
     hardBlock = true;
-    reasons.push({ severity: "BLOCK", code: "sell-sim:cannot-move", message: `Sell simulation: ${sell.note}` });
-  } else if (sell?.ok && sell.status === "SELLABLE-SO-FAR") {
+    reasons.push({ severity: "BLOCK", code: "exit-sim:cannot-exit", message: `Full exit simulation: ${exit.note}` });
+  } else if (exit?.ok && exit.status === "EXIT-CLEARS") {
     sellProven = true;
-    reasons.push({ severity: "INFO", code: "sell-sim:movable", message: `Sell simulation: ${sell.note}` });
+    reasons.push({ severity: "INFO", code: "exit-sim:cleared", message: `Full exit simulation: ${exit.note}` });
   } else {
-    /* UNKNOWN sell sim. requireSellProof decides whether the absence of a sell proof denies ALLOW. */
-    reasons.push({ severity: "UNKNOWN", code: "sell-sim:unproven", message: `Sell simulation could not run: ${sell?.note || sell?.error || "no result"}` });
+    /* UNKNOWN exit sim. requireSellProof decides whether the absence of a sell proof denies ALLOW. */
+    reasons.push({ severity: "UNKNOWN", code: "exit-sim:unproven", message: `Full exit simulation could not run: ${exit?.note || exit?.error || "no result"}` });
   }
 
   /* ── Liquidity floor ───────────────────────────────────────────────────────────────────────── */
@@ -149,7 +150,8 @@ export async function tradeGate(rawAddress, opts = {}) {
     reasons,
     verdictOfRugCheck: rug.verdict,
     rug: { verdict: rug.verdict, signals: rug.signals, unmeasured: rug.unmeasured },
-    sellSimulation: sell,
+    exitSimulation: exit,
+    sellSimulation: exit,
     rwa,
     policy,
     disclaimer: DISCLAIMER,

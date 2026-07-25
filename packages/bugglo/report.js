@@ -20,7 +20,6 @@
 const UNMEASURED_LABELS = {
   holderConcentration: "holder concentration",
   liquidityLock: "liquidity lock",
-  honeypotSimulation: "honeypot / sell simulation",
 };
 
 /* Painting is injected rather than baked in: the MCP server needs plain text (its output lands

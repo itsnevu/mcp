@@ -93,7 +93,8 @@ describe("rugCheck", () => {
        "and those were fine too", which is precisely the lie we are preventing. */
     expect(keys).toContain("holderConcentration");
     expect(keys).toContain("liquidityLock");
-    expect(keys).toContain("honeypotSimulation");
+    expect(keys).not.toContain("honeypotSimulation");
+    expect(result.signals.find((s) => s.key === "exit")?.status).toBe("UNKNOWN");
   });
 
   it("calls an EOA an EOA rather than inventing a token for it", async () => {

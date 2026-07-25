@@ -50,6 +50,7 @@ npx bugglo --rpc-list https://rpc.one,https://rpc.two 0x2103faA9D1762e27a716C617
 | `bugglo proxy <address>` | EIP-1967 implementation slot status. |
 | `bugglo powers <address>` | Common privileged function selectors found in deployed bytecode. |
 | `bugglo market <address>` | DexScreener liquidity, FDV, volume, buy/sell counts, pool age, and ratios. |
+| `bugglo exit <address>` | Read-only full-exit simulation: does a sell actually clear? |
 | `bugglo limits` | Checks this package cannot perform from bare RPC + public DEX data. |
 
 Options:
@@ -81,13 +82,13 @@ VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
           renounced — the contract may use roles or an embedded admin that I cannot see.
   PASS    Contract exists
           4,830 bytes of bytecode on Robinhood Chain (chain 4663).
-  PASS    Sells are going through
-          People are getting out, so it is not a hard honeypot.
+  PASS    Full exit simulation cleared
+          A funded synthetic holder completed a full sell through the pool and
+          received value back, at this block and at this size. Not a promise.
 
 NOT CHECKED — these are not passes
   holder concentration
   liquidity lock
-  honeypot / sell simulation
 ```
 
 The verdict is intentionally wordy. Rounding it up to "safe" is the bug this package exists to
@@ -169,7 +170,6 @@ These checks are always disclosed as not measured:
 |---|---|
 | Holder concentration | Needs an indexer. Reconstructing balances from all `Transfer` logs is not viable at CLI latency on a public RPC. |
 | Liquidity lock | Needs a known locker registry for this chain. |
-| Honeypot sell simulation | Needs a sell simulation from a holder through the router. Bugglo does not run that read today. |
 
 No numeric risk score is emitted. A score made from partial data launders ignorance into confidence.
 

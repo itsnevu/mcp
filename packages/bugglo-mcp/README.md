@@ -77,6 +77,8 @@ VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
           No EIP-1967 implementation slot — the code cannot be swapped out from under you.
   PASS    Sells are going through
           276 sells against 419 buys in 24h — people are getting out, so it is not a hard honeypot.
+  PASS    Full exit simulation cleared
+          A funded synthetic holder completed a full sell through the pool and received value back.
   UNKNOWN Ownership unclear
           There is no standard owner() function. That does NOT mean ownership is renounced — the
           contract may use roles or an embedded admin that I cannot see from here.
@@ -85,7 +87,6 @@ NOT CHECKED — these are not passes
   holder concentration        Needs an indexer. No indexer covers this chain yet.
   liquidity lock              Needs a locker registry. This chain has none, so a locked pool and an
                               unlocked one look identical from here.
-  honeypot / sell simulation  Not run. A passing market check is not proof that you can exit.
 ```
 
 Three rules this server will not break:
@@ -93,7 +94,7 @@ Three rules this server will not break:
 **UNKNOWN is not PASS.** A check that could not run is never a check that passed. There is no code
 path here that turns a failed read into a clean result.
 
-**No numeric risk score.** A score computed from four measured signals and three unknowns is a number
+**No numeric risk score.** A score computed from measured signals and remaining unknowns is a number
 that launders ignorance into false confidence. So there isn't one.
 
 **Powers are disclosed, not judged.** Mintable is not a rug. Pausable is not a rug. Plenty of honest

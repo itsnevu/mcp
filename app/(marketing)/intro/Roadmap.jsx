@@ -57,7 +57,7 @@ const CAPABILITIES = [
     status: "live",
     prompt: "npx bugglo 0x7f3a…c9d2",
     title: "Rug-check from your terminal, with no account",
-    body: "The same chain-reading engine as the app, published on npm as bugglo. One command, no API key, no signup, no backend in the path — it reads Robinhood Chain from your own machine and prints what it found, plus the three checks it could not run. A zero exit code means the check ran, not that the token is safe.",
+    body: "The same chain-reading engine as the app, published on npm as bugglo. One command, no API key, no signup, no backend in the path — it reads Robinhood Chain from your own machine and prints what it found, plus the checks it could not run. A zero exit code means the check ran, not that the token is safe.",
   },
   {
     status: "live",

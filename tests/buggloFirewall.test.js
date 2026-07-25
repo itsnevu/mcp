@@ -40,14 +40,14 @@ describe("RWA registry", () => {
   });
 });
 
-/* The gate composes rugCheck + simulateSell + registry. We mock those three so the decision logic is
+/* The gate composes rugCheck + simulateExit + registry. We mock those three so the decision logic is
    tested in isolation, deterministically, with no network. */
-function mockModules({ rug, sell }) {
+function mockModules({ rug, exit }) {
   vi.doMock("../packages/bugglo/chain.js", () => ({
     rugCheck: vi.fn(async () => rug),
   }));
   vi.doMock("../packages/bugglo/simulate.js", () => ({
-    simulateSell: vi.fn(async () => sell),
+    simulateExit: vi.fn(async () => exit),
   }));
 }
 
@@ -68,9 +68,9 @@ const cleanRug = {
   signals: [{ key: "is-contract", status: "PASS", label: "Contract exists", detail: "4,830 bytes" }],
   unmeasured: [],
 };
-const sellPass = { ok: true, status: "SELLABLE-SO-FAR", transferable: true, destination: REAL, note: "moved" };
-const sellUnknown = { ok: true, status: "UNKNOWN", transferable: null, destination: null, note: "no pool" };
-const sellBlocked = { ok: true, status: "CANNOT-MOVE", transferable: false, destination: REAL, note: "reverts" };
+const exitPass = { ok: true, status: "EXIT-CLEARS", exits: true, received: "1", note: "cleared" };
+const exitUnknown = { ok: true, status: "UNKNOWN", exits: null, received: null, note: "no pool" };
+const exitBlocked = { ok: true, status: "CANNOT-EXIT", exits: false, received: null, note: "reverts" };
 
 afterEach(() => {
   vi.resetModules();
@@ -79,33 +79,33 @@ afterEach(() => {
 
 describe("tradeGate decision", () => {
   it("ALLOWs only when a sell was actually proven", async () => {
-    mockModules({ rug: cleanRug, sell: sellPass });
+    mockModules({ rug: cleanRug, exit: exitPass });
     const g = await runGate(REAL, { side: "buy" });
     expect(g.decision).toBe("ALLOW");
   });
 
   it("fails CLOSED to UNKNOWN when the sell could not be proven (clean rug is not enough)", async () => {
-    mockModules({ rug: cleanRug, sell: sellUnknown });
+    mockModules({ rug: cleanRug, exit: exitUnknown });
     const g = await runGate(REAL, { side: "buy" });
     expect(g.decision).toBe("UNKNOWN");
   });
 
-  it("BLOCKs when the sell simulation proves the token cannot be moved", async () => {
-    mockModules({ rug: cleanRug, sell: sellBlocked });
+  it("BLOCKs when the full exit simulation proves the token cannot be sold", async () => {
+    mockModules({ rug: cleanRug, exit: exitBlocked });
     const g = await runGate(REAL, { side: "buy" });
     expect(g.decision).toBe("BLOCK");
     expect(g.reasons[0].severity).toBe("BLOCK");
   });
 
   it("BLOCKs a NOT A CONTRACT address regardless of the sell sim", async () => {
-    mockModules({ rug: { ...cleanRug, verdict: "NOT A CONTRACT", signals: [] }, sell: sellUnknown });
+    mockModules({ rug: { ...cleanRug, verdict: "NOT A CONTRACT", signals: [] }, exit: exitUnknown });
     const g = await runGate(REAL, { side: "buy" });
     expect(g.decision).toBe("BLOCK");
   });
 
   it("BLOCKs an RWA impostor even with a clean rug and a passing sell", async () => {
     const impostorRug = { ...cleanRug, address: NOT_OFFICIAL, token: { symbol: "AAPL", name: "Apple", decimals: 18 } };
-    mockModules({ rug: impostorRug, sell: { ...sellPass, destination: NOT_OFFICIAL } });
+    mockModules({ rug: impostorRug, exit: exitPass });
     const g = await runGate(NOT_OFFICIAL, { side: "buy" });
     expect(g.decision).toBe("BLOCK");
     expect(g.reasons.some((r) => r.code === "rwa:impostor")).toBe(true);
@@ -113,7 +113,7 @@ describe("tradeGate decision", () => {
 
   it("a FAIL rug signal forces BLOCK", async () => {
     const failRug = { ...cleanRug, verdict: "HIGH RISK", signals: [{ key: "x", status: "FAIL", label: "bad", detail: "d" }] };
-    mockModules({ rug: failRug, sell: sellPass });
+    mockModules({ rug: failRug, exit: exitPass });
     const g = await runGate(REAL, { side: "buy" });
     expect(g.decision).toBe("BLOCK");
   });
@@ -128,7 +128,7 @@ describe("tradeGate decision", () => {
         { key: "f", status: "FAIL", label: "fail", detail: "d" },
       ],
     };
-    mockModules({ rug: mixedRug, sell: sellPass });
+    mockModules({ rug: mixedRug, exit: exitPass });
     const g = await runGate(REAL, { side: "buy" });
     const severities = g.reasons.map((r) => r.severity);
     const firstWarn = severities.indexOf("WARN");
@@ -138,7 +138,7 @@ describe("tradeGate decision", () => {
   });
 
   it("respects requireSellProof=false: ALLOWs a clean token without a sell proof", async () => {
-    mockModules({ rug: cleanRug, sell: sellUnknown });
+    mockModules({ rug: cleanRug, exit: exitUnknown });
     const g = await runGate(REAL, { side: "buy", policy: { requireSellProof: false } });
     expect(g.decision).toBe("ALLOW");
   });

@@ -234,12 +234,9 @@ async function dexPairs(address) {
  * zero-sell reading is only allowed to mean anything once there are enough real buys behind
  * it (MIN_BUYS), and even then it is reported as "nobody has sold", not as "you cannot sell".
  *
- * The only thing that proves you cannot sell is a sell simulation: an eth_call against the router
- * from a holder's position, with state overrides for balance and allowance. eth_call is read-only —
- * it changes no state and needs no key — so this IS buildable from here. We have not built it.
- * That is why UNMEASURABLE.honeypotSimulation says "Not run" and not "cannot run": reading our own
- * unbuilt work as an impossibility would launder ignorance into a clean excuse, which is the exact
- * move this file exists to refuse.
+ * Historical buys/sells are useful context, but only a sell simulation can speak to whether a
+ * fresh holder can actually get out now. rugCheck() now runs the full-exit simulation when there is
+ * a usable pool; if that simulation cannot run, the result is UNKNOWN, never PASS.
  */
 const MIN_BUYS_FOR_SELL_SIGNAL = 30;
 
@@ -305,14 +302,75 @@ export const UNMEASURABLE = {
     "Holder distribution needs an indexer. Reconstructing it from Transfer logs is not possible at chat latency on a public RPC, and no indexer covers this chain yet.",
   liquidityLock:
     "LP-lock status needs to be resolved against a known locker registry. There is no locker registry for this chain yet, so a locked pool and an unlocked one look identical from here.",
-  honeypotSimulation:
-    "Proving a sell would go through needs a simulated sell (eth_call against the router from a holder). Not run — so a passing market check is not proof that you can exit.",
 };
+
+async function runExitSimulation(address, market) {
+  if (!market.ok) {
+    return {
+      ok: true,
+      status: "UNKNOWN",
+      note: "Market data was unavailable, so Bugglo could not identify a pool to simulate a full exit. UNKNOWN, not PASS.",
+    };
+  }
+  if (!market.hasMarket) {
+    return {
+      ok: true,
+      status: "UNKNOWN",
+      note: "No DEX pool was found, so a full exit cannot be simulated. This is an absent market, not a pass.",
+    };
+  }
+
+  try {
+    const { simulateExit } = await import("./simulate.js");
+    return await simulateExit(address, market);
+  } catch (error) {
+    return {
+      ok: false,
+      error: `exit simulation: ${String(error?.shortMessage || error?.message || error).slice(0, 200)}`,
+    };
+  }
+}
+
+function exitSignal(exit) {
+  if (!exit || exit.ok === false) {
+    return {
+      key: "exit",
+      status: "UNKNOWN",
+      label: "Full exit simulation unavailable",
+      detail: `${exit?.error || "The full exit simulation failed before returning a result."} Nothing was proven — UNKNOWN, not PASS.`,
+    };
+  }
+
+  if (exit.status === "EXIT-CLEARS") {
+    return {
+      key: "exit",
+      status: "PASS",
+      label: "Full exit simulation cleared",
+      detail: `${exit.note}${exit.received ? ` Measured output: ${exit.received}.` : ""}`,
+    };
+  }
+
+  if (exit.status === "CANNOT-EXIT") {
+    return {
+      key: "exit",
+      status: "FAIL",
+      label: "Cannot complete a sell",
+      detail: exit.note,
+    };
+  }
+
+  return {
+    key: "exit",
+    status: "UNKNOWN",
+    label: "Full exit simulation inconclusive",
+    detail: exit.note || "The full exit simulation could not run. UNKNOWN, not PASS.",
+  };
+}
 
 /**
  * The orchestrator. Every signal is PASS / FAIL / WARN / UNKNOWN with the evidence behind it.
- * There is deliberately NO numeric risk score: a score computed from four measured signals and
- * three unknowns is a number that launders ignorance into false confidence, and that number is
+ * There is deliberately NO numeric risk score: a score computed from measured signals and
+ * remaining unknowns is a number that launders ignorance into false confidence, and that number is
  * exactly the kind of output this checker exists to prevent.
  *
  * → { address, chain, checked, verdict, signals[], unmeasured[], errors[] }
@@ -499,6 +557,8 @@ export async function rugCheck(rawAddress) {
       });
     }
   }
+
+  signals.push(exitSignal(await runExitSimulation(address, market)));
 
   /* THE VERDICT RULE. A risk level is only allowed when the checks that could actually fail have
      actually run. Otherwise the honest word is INSUFFICIENT DATA — and it is a first-class result

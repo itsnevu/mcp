@@ -322,8 +322,8 @@ tool(
       "DEX market data for a Robinhood Chain token: deepest pool liquidity in USD, FDV, 24h volume, buy/sell " +
       "counts, pool age, and the two ratios that matter (volume-to-liquidity, the wash-trading fingerprint; " +
       "FDV-to-liquidity, the exit that cannot be taken at that price). On the honeypot question it is " +
-      "deliberately careful: it reports 'nobody has sold', never 'you cannot sell'. Only a sell simulation " +
-      "proves the latter, and this cannot run one.",
+      "deliberately careful: it reports 'nobody has sold', never 'you cannot sell'. Use " +
+      "bugglo_simulate_exit when you need proof that a fresh sell actually clears.",
     inputSchema: ADDRESS_ARG,
   },
   async ({ address }) => {
@@ -361,7 +361,7 @@ tool(
       cannotMeasure: Object.entries(UNMEASURABLE).map(([key, why]) => ({ key, why })),
       rule: "A check that did not run is never a check that passed. UNKNOWN is not PASS.",
       noRiskScore:
-        "Bugglo deliberately returns no numeric risk score. A score computed from four measured signals and three unknowns is a number that launders ignorance into false confidence.",
+        "Bugglo deliberately returns no numeric risk score. A score computed from measured signals and remaining unknowns launders ignorance into false confidence.",
     })
 );
 
@@ -414,8 +414,7 @@ tool(
       "no real funds touched. Returns CANNOT-MOVE (transfer reverts or returns false — a hard honeypot " +
       "signal), SELLABLE-SO-FAR (the tokens can move; NOT proof you can fully exit, since the swap and any " +
       "sell tax are not measured), or UNKNOWN (node has no state overrides, balance slot not found, or no " +
-      "pool). UNKNOWN is never PASS. This finally builds the honeypot simulation the rug check lists as " +
-      "not-yet-built.",
+      "pool). UNKNOWN is never PASS. Prefer bugglo_simulate_exit when you need proof that a full sell clears.",
     inputSchema: ADDRESS_ARG,
   },
   async ({ address }) => {
