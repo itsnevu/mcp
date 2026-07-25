@@ -158,7 +158,7 @@ function tool(name, config, handler) {
   });
 }
 
-const server = new McpServer({ name: "bugglo", version: "0.1.0" });
+const server = new McpServer({ name: "bugglo", version: "0.4.0" });
 
 /* ── The flagship ─────────────────────────────────────────────────────────────────────────── */
 

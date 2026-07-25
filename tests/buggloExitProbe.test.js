@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
+import { keccak256, encodeAbiParameters, getAddress } from "viem";
 
 /* The full-exit simulation. simulateSell() proves tokens can MOVE; simulateExit() proves a sell
    actually CLEARS, by injecting BuggloExitProbe's runtime bytecode into an eth_call and paying the
@@ -460,5 +461,103 @@ describe("simulateExit — selling from a real holder", () => {
     const result = await simulateExit(TOKEN);
     expect(result.status).toBe("EXIT-CLEARS");
     expect(result.evidence.from).toBe("synthetic");
+  });
+});
+
+/* Uniswap V4. Chain 4663 runs it alongside V3, and it was the single largest reason this
+   simulation could not answer: 23 pools, the biggest holding $949k, all previously UNKNOWN.
+   A V4 pool has no address — it is an id inside a singleton — and that id is keccak of the
+   PoolKey, so the key has to be recovered from the manager's Initialize log and then re-hashed
+   to prove it. These tests guard the proving step, because a PoolKey we merely believe is one
+   that could describe a different pool entirely. */
+describe("simulateExit — Uniswap V4", () => {
+  const MANAGER = "0x8366a39cc670b4001a1121b8f6a443a643e40951";
+  const HOLDER = "0x600a39873e223c0640138862fB1f939781b1dbA1";
+  const HOOK = "0x4e3468951D49f2EEa976eD0D6e75fFCb44a9a544";
+  const COUNTER_V4 = "0x0bd7d308f8e1639fab988df18a8011f41eacad73";
+  /* Derived, not pasted. The pool id IS keccak of the PoolKey, so a hardcoded id from a different
+     pool makes every test here fail verification for the wrong reason — which is what happened the
+     first time this was written. */
+  const POOL_KEY_ABI = [{ type: "address" }, { type: "address" }, { type: "uint24" }, { type: "int24" }, { type: "address" }];
+  const POOL_ID = keccak256(
+    encodeAbiParameters(POOL_KEY_ABI, [getAddress(COUNTER_V4), getAddress(TOKEN), 0x800000, 200, getAddress(HOOK)])
+  );
+  /* The real Initialize payload for that pool: fee 0x800000 (the dynamic-fee flag), tickSpacing
+     200, then the hook. Kept verbatim so the decode is tested against production bytes. */
+  const INIT_DATA =
+    "0x0000000000000000000000000000000000000000000000000000000000800000" +
+    "00000000000000000000000000000000000000000000000000000000000000c8" +
+    "0000000000000000000000004e3468951d49f2eea976ed0d6e75ffcb44a9a544" +
+    "0000000000000000000000000000000000016755643048d7f68fafbf0c918fea" +
+    "0000000000000000000000000000000000000000000000000000000000037cf8";
+
+  const initLog = {
+    topics: [
+      "0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438",
+      POOL_ID,
+      `0x000000000000000000000000${COUNTER_V4.slice(2)}`,
+      `0x000000000000000000000000${TOKEN.slice(2).toLowerCase()}`,
+    ],
+    data: INIT_DATA,
+  };
+
+  const withV4 = ({ logs = [initLog], swap } = {}) => {
+    GET_MARKET.mockResolvedValue({ ok: true, hasMarket: true, pairAddress: POOL_ID, ageMs: 1_496_917_752 });
+    CHAIN_CALL.mockImplementation(async (args) => {
+      if (String(args.data || "").startsWith("0x313ce567")) return { data: word("12") }; // decimals
+      if (args.stateOverride?.some((o) => o.code)) return swap(args);
+      return { data: word((10n ** 20n).toString(16)) }; //                                  balanceOf
+    });
+    CLIENT_EXTRAS.getBlockNumber = async () => 19_406_276n;
+    CLIENT_EXTRAS.getLogs = async () => [
+      { topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", word("0"), `0x000000000000000000000000${HOLDER.slice(2).toLowerCase()}`] },
+    ];
+    CLIENT_EXTRAS.getBytecode = async () => "0x";
+    CLIENT_EXTRAS.request = async () => logs;
+  };
+
+  it("routes a 32-byte pool id to the V4 path instead of calling it a broken address", async () => {
+    withV4({ swap: () => ({ data: word("2711") + word("de0b6b3a7640000").slice(2) }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("EXIT-CLEARS");
+    expect(result.evidence.version).toBe("v4");
+    expect(result.evidence.hooks.toLowerCase()).toBe(HOOK.toLowerCase());
+    expect(result.evidence.pool).toBe(POOL_ID);
+    void MANAGER;
+  });
+
+  /* The id IS the hash of the key, so this check is complete rather than heuristic. A log that
+     decodes to a key hashing to something else is describing another pool, and swapping against
+     it would answer a question nobody asked. */
+  it("refuses a PoolKey whose re-hash does not match the pool id", async () => {
+    const tampered = { ...initLog, data: INIT_DATA.replace("00000000000000000000000000000000000000000000000000000000000000c8", "00000000000000000000000000000000000000000000000000000000000000c9") };
+    withV4({ logs: [tampered], swap: () => ({ data: word("1") + word("1").slice(2) }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+    expect(result.note).toMatch(/could not be recovered and verified/i);
+    expect(result.note).toMatch(/not a finding against the token/i);
+  });
+
+  it("is UNKNOWN when the Initialize log cannot be found at all", async () => {
+    withV4({ logs: [], swap: () => ({ data: word("1") + word("1").slice(2) }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+  });
+
+  /* On V4 a revert can be the hook rather than the token, and the note has to say so — the whole
+     reason V4 needed its own simulation is that a hook can trap sellers while the token looks
+     ordinary. */
+  it("reports CANNOT-EXIT and names the hook as a possible cause when the swap reverts", async () => {
+    withV4({ swap: () => { throw new Error("execution reverted"); } });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("CANNOT-EXIT");
+    expect(result.note).toMatch(/HOOK refusing the swap/i);
+  });
+
+  it("refuses an empty probe return as a pass on the V4 path too", async () => {
+    withV4({ swap: () => ({ data: "0x" }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+    expect(result.exits).toBeNull();
   });
 });

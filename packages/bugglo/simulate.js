@@ -293,6 +293,9 @@ export const EXIT_PROBE_RUNTIME =
  * was reproduced during development. Anything other than 64 bytes is UNKNOWN. */
 const EXIT_PROBE_RETURN_BYTES = 64;
 
+/* Real ERC-20s live at 6, 8 or 18. 36 is already absurd and leaves room for the genuinely odd. */
+const MAX_SANE_DECIMALS = 36;
+
 /* An obviously-fake address, like SIM_HOLDER, so anyone reading a trace knows this was simulated. */
 const EXIT_PROBE = getAddress("0x00000000000000000000000000000000B0002E57");
 
@@ -419,6 +422,309 @@ function unknownExit(note, extra = {}) {
   return { ok: true, status: "UNKNOWN", exits: null, received: null, note, evidence: null, ...extra };
 }
 
+export const EXIT_PROBE_V4_RUNTIME =
+  "0x" +
+  "608060405234801561000f575f80fd5b5060043610610034575f3560e01c806391dd734614610038578063e1e77e37146100" +
+  "61575b5f80fd5b61004b6100463660046107c3565b610089565b6040516100589190610831565b60405180910390f35b6100" +
+  "7461006f36600461089a565b610473565b60408051928352602083019190915201610058565b5f546060906001600160a01b" +
+  "031633146100de5760405162461bcd60e51b81526020600482015260116024820152703ab732bc3832b1ba32b21031b0b636" +
+  "32b960791b60448201526064015b60405180910390fd5b5f808080806100ef878901896109b7565b94509450945094509450" +
+  "5f336001600160a01b031663f3cd914c87604051806060016040528089151581526020018861012790610a8a565b81526020" +
+  "018961015557610150600173fffd8963efd1fc6a506488495d951d5263988d26610aa4565b610165565b6101656401000276" +
+  "a36001610ac3565b6001600160a01b03908116909152604080516001600160e01b031960e087901b16815284518316600482" +
+  "0152602080860151841660248301528583015162ffffff166044830152606086015160020b60648301526080909501518316" +
+  "60848201528351151560a48201529383015160c485015291909101511660e48201526101206101048201525f610124820152" +
+  "610144016020604051808303815f875af1158015610213573d5f803e3d5ffd5b505050506040513d601f19601f8201168201" +
+  "80604052508101906102379190610ae2565b9050608081901d6001600160801b0382165f8088610256578284610259565b83" +
+  "835b915091505f82600f0b1261029e5760405162461bcd60e51b815260206004820152600c60248201526b1b9bdd1a1a5b99" +
+  "c81bddd95960a21b60448201526064016100d5565b5f6102a883610af9565b604051632961046560e21b81526001600160a0" +
+  "1b038a1660048201526001600160801b03919091169150339063a5841194906024015f604051808303815f87803b15801561" +
+  "02f4575f80fd5b505af1158015610306573d5f803e3d5ffd5b505060405163a9059cbb60e01b815233600482015260248101" +
+  "8490526001600160a01b038b16925063a9059cbb91506044016020604051808303815f875af1158015610354573d5f803e3d" +
+  "5ffd5b505050506040513d601f19601f820116820180604052508101906103789190610b26565b50336001600160a01b0316" +
+  "6311da60b46040518163ffffffff1660e01b81526004016020604051808303815f875af11580156103b6573d5f803e3d5ffd" +
+  "5b505050506040513d601f19601f820116820180604052508101906103da9190610ae2565b505f82600f0b13156104505760" +
+  "4051630b0d9c0960e01b81526001600160a01b03881660048201523060248201526001600160801b03831660448201523390" +
+  "630b0d9c09906064015f604051808303815f87803b158015610439575f80fd5b505af115801561044b573d5f803e3d5ffd5b" +
+  "505050505b60405180602001604052805f8152509b5050505050505050505050505b92915050565b6001545f908190600160" +
+  "a01b900460ff16156104c35760405162461bcd60e51b815260206004820152600f60248201526e7265656e7472616e742070" +
+  "726f626560881b60448201526064016100d5565b6001805460ff60a01b1916600160a01b1790556001600160ff1b03851115" +
+  "61052d5760405162461bcd60e51b815260206004820152601760248201527f616d6f756e74496e206578636565647320696e" +
+  "7432353600000000000000000060448201526064016100d5565b5f80546001600160a01b038a81166001600160a01b031992" +
+  "8316178355600180549188169190921681179091556040516370a0823160e01b81523060048201526370a082319060240160" +
+  "2060405180830381865afa158015610591573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081" +
+  "01906105b59190610ae2565b6040516370a0823160e01b81523060048201529091505f906001600160a01b038616906370a0" +
+  "823190602401602060405180830381865afa1580156105fc573d5f803e3d5ffd5b505050506040513d601f19601f82011682" +
+  "0180604052508101906106209190610ae2565b9050896001600160a01b03166348c894918a8a8a8a8a60405160200161064a" +
+  "959493929190610b48565b6040516020818303038152906040526040518263ffffffff1660e01b8152600401610675919061" +
+  "0831565b5f604051808303815f875af1158015610690573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f" +
+  "191682016040526106b79190810190610c02565b506040516370a0823160e01b81523060048201525f906001600160a01b03" +
+  "8716906370a0823190602401602060405180830381865afa1580156106fc573d5f803e3d5ffd5b505050506040513d601f19" +
+  "601f820116820180604052508101906107209190610ae2565b6040516370a0823160e01b81523060048201529091505f9060" +
+  "01600160a01b038916906370a0823190602401602060405180830381865afa158015610767573d5f803e3d5ffd5b50505050" +
+  "6040513d601f19601f8201168201806040525081019061078b9190610ae2565b90506107978383610c96565b95506107a381" +
+  "85610c96565b6001805460ff60a01b19169055959c959b50949950505050505050505050565b5f80602083850312156107d4" +
+  "575f80fd5b823567ffffffffffffffff8111156107ea575f80fd5b8301601f810185136107fa575f80fd5b803567ffffffff" +
+  "ffffffff811115610810575f80fd5b856020828401011115610821575f80fd5b6020919091019590945092505050565b6020" +
+  "81525f82518060208401528060208501604085015e5f604082850101526040601f19601f8301168401019150509291505056" +
+  "5b6001600160a01b038116811461087a575f80fd5b50565b801515811461087a575f80fd5b80356108958161087d565b9190" +
+  "50565b5f805f805f808688036101408112156108b1575f80fd5b87356108bc81610866565b965060a0601f19820112156108" +
+  "cf575f80fd5b5060208701945060c08701356108e48161087d565b935060e087013592506101008701356108fc8161086656" +
+  "5b915061012087013561090d81610866565b809150509295509295509295565b634e487b7160e01b5f52604160045260245f" +
+  "fd5b60405160a0810167ffffffffffffffff811182821017156109525761095261091b565b60405290565b604051601f8201" +
+  "601f1916810167ffffffffffffffff811182821017156109815761098161091b565b604052919050565b803562ffffff8116" +
+  "8114610895575f80fd5b8035600281900b8114610895575f80fd5b803561089581610866565b5f805f805f85870361012081" +
+  "12156109cd575f80fd5b60a08112156109da575f80fd5b506109e361092f565b86356109ee81610866565b81526020870135" +
+  "6109fe81610866565b6020820152610a0f60408801610989565b6040820152610a206060880161099b565b60608201526080" +
+  "870135610a3381610866565b60808201529450610a4660a0870161088a565b935060c08601359250610a5b60e087016109ac" +
+  "565b9150610a6a61010087016109ac565b90509295509295909350565b634e487b7160e01b5f52601160045260245ffd5b5f" +
+  "600160ff1b8201610a9e57610a9e610a76565b505f0390565b6001600160a01b03828116828216039081111561046d576104" +
+  "6d610a76565b6001600160a01b03818116838216019081111561046d5761046d610a76565b5f60208284031215610af2575f" +
+  "80fd5b5051919050565b5f81600f0b6f7fffffffffffffffffffffffffffffff198103610b1e57610b1e610a76565b5f0392" +
+  "915050565b5f60208284031215610b36575f80fd5b8151610b418161087d565b9392505050565b61012081018635610b5881" +
+  "610866565b6001600160a01b031682526020870135610b7181610866565b6001600160a01b0316602083015262ffffff610b" +
+  "8f60408901610989565b166040830152610ba16060880161099b565b60020b60608301526080870135610bb781610866565b" +
+  "6001600160a01b0316608083015285151560a08301528460c0830152610be860e08301856001600160a01b03169052565b60" +
+  "01600160a01b0383166101008301529695505050505050565b5f60208284031215610c12575f80fd5b815167ffffffffffff" +
+  "ffff811115610c28575f80fd5b8201601f81018413610c38575f80fd5b805167ffffffffffffffff811115610c5257610c52" +
+  "61091b565b610c65601f8201601f1916602001610958565b818152856020838501011115610c79575f80fd5b816020840160" +
+  "2083015e5f91810160200191909152949350505050565b8181038181111561046d5761046d610a7656fea264697066735822" +
+  "1220199b1c2c19c7d6ad488288a925e0aff691840cff2637f604f768921c1adc0ebe64736f6c634300081a0033";
+
+/* ── Uniswap V4 ──────────────────────────────────────────────────────────────────────────────
+ *
+ * Chain 4663 runs V3 and V4 side by side, and V4 was the largest single reason this simulation
+ * could not answer: on a 60-token sample about a third came back UNKNOWN, with V4 pools the biggest
+ * share — 23 of them, the largest holding $949k.
+ *
+ * V4 also brings a honeypot vector V3 does not have. Every V4 pool carries a HOOK: an arbitrary
+ * contract invoked around each swap, free to revert, to gate on the caller, or to charge a fee that
+ * is not the pool's. Both pools measured here have a hook AND the dynamic-fee flag set. So on V4 the
+ * token can be entirely innocent while the trap lives in the hook, where no amount of reading the
+ * token's bytecode will ever find it. Only attempting the swap finds it.
+ *
+ * Getting there needs one thing V3 did not. A V4 pool has no address — it is an id inside a
+ * singleton — and that id is keccak of the PoolKey, so it cannot be inverted, and brute force dies
+ * on the 160-bit hooks field. The key is recovered from the manager's own Initialize log and then
+ * re-hashed to prove it, because a PoolKey we merely believe is a PoolKey that could describe a
+ * different pool. */
+export const V4_POOL_MANAGER = getAddress("0x8366a39cc670b4001a1121b8f6a443a643e40951");
+const V4_INITIALIZE_TOPIC = "0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438";
+/* Chain 4663 produces a block roughly every 0.1s, measured over 100k blocks. Only used to aim a log
+   search at the right depth — the search widens if the first window misses. */
+const SECONDS_PER_BLOCK = 0.1003;
+
+const POOL_KEY_FIELDS = [
+  { type: "address" }, { type: "address" }, { type: "uint24" }, { type: "int24" }, { type: "address" },
+];
+const PROBE_EXIT_V4 = [
+  {
+    name: "probeExitV4",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { type: "address" },
+      {
+        type: "tuple",
+        components: [
+          { name: "currency0", type: "address" }, { name: "currency1", type: "address" },
+          { name: "fee", type: "uint24" }, { name: "tickSpacing", type: "int24" },
+          { name: "hooks", type: "address" },
+        ],
+      },
+      { type: "bool" }, { type: "uint256" }, { type: "address" }, { type: "address" },
+    ],
+    outputs: [{ type: "uint256" }, { type: "uint256" }],
+  },
+];
+
+/** A V4 pool id is 32 bytes and therefore never a valid address. That is the whole detector. */
+function looksLikeV4PoolId(value) {
+  return typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value) && !isAddress(value);
+}
+
+/**
+ * Recover the PoolKey behind a V4 pool id from the manager's Initialize log, and prove it by
+ * re-hashing. Returns the key or null — a key we cannot verify is one we must not swap against.
+ */
+async function recoverV4PoolKey(poolId, ageMs) {
+  const client = chainClient();
+  let head;
+  try {
+    head = await client.getBlockNumber();
+  } catch {
+    return null;
+  }
+
+  const blocksOld = Number.isFinite(ageMs) && ageMs > 0 ? BigInt(Math.round(ageMs / 1000 / SECONDS_PER_BLOCK)) : 0n;
+  const centre = head > blocksOld ? head - blocksOld : 0n;
+
+  for (const window of [30_000n, 300_000n]) {
+    const fromBlock = centre > window ? centre - window : 0n;
+    let logs;
+    try {
+      /* Filtered at the node, not here. The manager emits an Initialize for every pool on the
+         chain, so an unfiltered window is thousands of logs to ship and sift for one of them —
+         slow enough that the RPC simply refuses, which reads back as "no such pool".
+         Raw request() rather than getLogs(): viem's helper builds topics from an event ABI and
+         rejects a hand-supplied topics array, and the second topic here IS the search key. */
+      const toBlock = centre + window > head ? "latest" : `0x${(centre + window).toString(16)}`;
+      logs = await client.request({
+        method: "eth_getLogs",
+        params: [
+          {
+            address: V4_POOL_MANAGER,
+            fromBlock: `0x${fromBlock.toString(16)}`,
+            toBlock,
+            topics: [V4_INITIALIZE_TOPIC, poolId],
+          },
+        ],
+      });
+    } catch {
+      continue;
+    }
+    const hit = logs[0];
+    if (!hit) continue;
+
+    const word = (i) => `0x${String(hit.data).slice(2 + i * 64, 2 + (i + 1) * 64)}`;
+    const key = {
+      currency0: getAddress(`0x${hit.topics[2].slice(26)}`),
+      currency1: getAddress(`0x${hit.topics[3].slice(26)}`),
+      fee: Number(BigInt(word(0))),
+      tickSpacing: Number(BigInt(word(1))),
+      hooks: getAddress(`0x${word(2).slice(26)}`),
+    };
+
+    /* Prove it. The id IS the hash of the key, so this is a complete check and not a heuristic. */
+    const rehashed = keccak256(
+      encodeAbiParameters(POOL_KEY_FIELDS, [key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks])
+    );
+    if (rehashed.toLowerCase() !== poolId.toLowerCase()) return null;
+    return key;
+  }
+  return null;
+}
+
+/**
+ * The V4 half of simulateExit. Same vocabulary, same rule: evidence or UNKNOWN, never a pass it did
+ * not earn.
+ */
+async function simulateExitV4(token, poolId, market) {
+  const key = await recoverV4PoolKey(poolId, Number(market?.ageMs));
+  if (!key) {
+    return unknownExit(
+      "This is a Uniswap V4 pool and its PoolKey could not be recovered and verified, so the sell " +
+        "cannot be simulated. That is a limit of this simulation, not a finding against the token. " +
+        "UNKNOWN, not PASS."
+    );
+  }
+
+  if (key.currency0 !== token && key.currency1 !== token) {
+    return unknownExit("The V4 pool does not hold this token, so an exit through it cannot be simulated. UNKNOWN, not PASS.");
+  }
+
+  let decimals;
+  try {
+    const raw = await chainClient().call({ to: token, data: encodeFunctionData({ abi: DECIMALS, functionName: "decimals", args: [] }) });
+    decimals = Number(BigInt(raw?.data || "0x12"));
+  } catch {
+    return unknownExit("The token's decimals could not be read, so a trade size cannot be chosen. UNKNOWN, not PASS.");
+  }
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > MAX_SANE_DECIMALS) {
+    return unknownExit(
+      `The token reports ${decimals} decimals, which is outside the range this simulation can size a ` +
+        "trade in. That is a fact about its metadata, not evidence about selling — UNKNOWN, not PASS, " +
+        "and not a finding against the token."
+    );
+  }
+
+  const wholeToken = 10n ** BigInt(decimals);
+  /* V4 has no pair contract to exclude, but it has something worse to pick by accident: the
+     PoolManager itself is a large holder of every token it custodies, and selling its inventory
+     back through itself is not a trade anyone is asking about. */
+  const holder = await findRealHolder(token, V4_POOL_MANAGER, wholeToken);
+  if (!holder) {
+    return unknownExit(
+      "No holder of this token could be found to simulate a sell from, and a V4 pool cannot be " +
+        "funded by overriding storage the way a V3 one can. UNKNOWN, not PASS, and not a finding " +
+        "against the token."
+    );
+  }
+
+  const zeroForOne = key.currency0 === token;
+  const counterToken = zeroForOne ? key.currency1 : key.currency0;
+  const amountIn = holder.balance < wholeToken ? holder.balance : wholeToken;
+  const evidence = {
+    pool: poolId,
+    seller: holder.address,
+    counterToken,
+    amountIn: amountIn.toString(),
+    hooks: key.hooks,
+    fee: key.fee,
+    version: "v4",
+    from: "real-holder",
+  };
+
+  let raw;
+  try {
+    const result = await chainClient().call({
+      to: holder.address,
+      data: encodeFunctionData({
+        abi: PROBE_EXIT_V4,
+        functionName: "probeExitV4",
+        args: [V4_POOL_MANAGER, key, zeroForOne, amountIn, token, counterToken],
+      }),
+      stateOverride: [{ address: holder.address, code: EXIT_PROBE_V4_RUNTIME }],
+    });
+    raw = result?.data ?? "0x";
+  } catch (error) {
+    return {
+      ok: true,
+      status: "CANNOT-EXIT",
+      exits: false,
+      received: null,
+      note:
+        "A real holder of this token could not complete a sell through the V4 pool: the swap reverted. " +
+        "On V4 that is a blocked transfer, a fee the pool will not accept, or a HOOK refusing the swap — " +
+        "and a hook can trap sellers while the token itself looks perfectly ordinary. A hard signal " +
+        "against exiting.",
+      evidence: { ...evidence, reason: String(error?.shortMessage || error?.message || error).slice(0, 140) },
+    };
+  }
+
+  if (typeof raw !== "string" || (raw.length - 2) / 2 !== EXIT_PROBE_RETURN_BYTES) {
+    return unknownExit(
+      "The V4 exit probe did not answer in its expected shape, which is what a node that ignores code " +
+        "state overrides looks like. Refusing to read that as a pass. UNKNOWN, not PASS."
+    );
+  }
+
+  const [received, paid] = decodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], raw);
+  if (received === 0n) {
+    return {
+      ok: true,
+      status: "CANNOT-EXIT",
+      exits: false,
+      received: "0",
+      note: "The V4 swap completed but returned nothing at all. Tokens left the holder and no value came back — an exit in name only.",
+      evidence: { ...evidence, paid: paid.toString() },
+    };
+  }
+
+  return {
+    ok: true,
+    status: "EXIT-CLEARS",
+    exits: true,
+    received: received.toString(),
+    note:
+      "A real holder completed a full sell through the Uniswap V4 pool, hook and all, and received " +
+      "value back at this block and at this size. That is the strongest read-only evidence of " +
+      "sellability there is — it is not a promise: a hook can change its mind on the next block as " +
+      "easily as an owner can.",
+    evidence: { ...evidence, paid: paid.toString() },
+  };
+}
+
 /**
  * Simulate a COMPLETE sell: tokens into the pool, swap executed, output measured.
  *
@@ -438,12 +744,13 @@ export async function simulateExit(rawAddress, marketOverride = null) {
 
   const market = marketOverride || (await getMarket(token));
   const pairAddress = market?.ok && market.hasMarket ? market.pairAddress : null;
-  if (!pairAddress || !isAddress(pairAddress)) {
-    return unknownExit(
-      pairAddress
-        ? "The DEX pool identifier is not a standard address, so an exit cannot be simulated from here. UNKNOWN, not PASS."
-        : "No DEX pool found to sell into, so an exit cannot be simulated. This is not a pass — it is an absent market."
-    );
+  if (!pairAddress) {
+    return unknownExit("No DEX pool found to sell into, so an exit cannot be simulated. This is not a pass — it is an absent market.");
+  }
+  /* A 32-byte identifier is a Uniswap V4 pool id, not a broken address. It used to end the run. */
+  if (looksLikeV4PoolId(pairAddress)) return simulateExitV4(token, pairAddress, market);
+  if (!isAddress(pairAddress)) {
+    return unknownExit("The DEX pool identifier is not a standard address, so an exit cannot be simulated from here. UNKNOWN, not PASS.");
   }
   const pool = getAddress(pairAddress);
 
@@ -513,7 +820,6 @@ export async function simulateExit(rawAddress, marketOverride = null) {
          The probe would answer a different question and look like it worked.
      Real ERC-20s live at 6, 8 or 18; 36 is already absurd and leaves room for the genuinely odd.
      Outside that, the honest answer is that we did not run the check. */
-  const MAX_SANE_DECIMALS = 36;
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > MAX_SANE_DECIMALS) {
     return unknownExit(
       `The token reports ${decimals} decimals, which is outside the range this simulation can size a ` +

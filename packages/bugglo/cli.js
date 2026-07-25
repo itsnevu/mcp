@@ -5,7 +5,7 @@
  * command must not grow separate ideas of what "rug check" means.
  */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_CHAIN_ID = 4663;
 const CHAIN_ID_HEX = `0x${ROBINHOOD_CHAIN_ID.toString(16)}`;
