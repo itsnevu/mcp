@@ -235,6 +235,28 @@ describe("simulateExit entry points", () => {
     expect(source).toMatch(/UNKNOWN is\s+"?\s*\+?\s*"?never PASS/);
   });
 
+
+  it("the web agent registers robinhood_exit_check as a first-party in-process tool", () => {
+    const source = readFileSync("lib/liveAgent.js", "utf8");
+    expect(source).toContain('name: "robinhood_exit_check"');
+    expect(source).toMatch(/import\("bugglo\/simulate"\)/);
+    /* First-party means in-process: it must NOT be reached through the MCP fleet, which is the
+       fleet that answered about the wrong chain and started this whole project. */
+    const block = source.slice(source.indexOf("const FIRST_PARTY_TOOLS"), source.indexOf("function truncate"));
+    expect(block).toContain("robinhood_exit_check");
+    expect(block).toContain("robinhood_rug_check");
+  });
+
+  it("the system prompt stops listing sellability as unmeasurable and points at the tool", () => {
+    const source = readFileSync("lib/systemPrompt.js", "utf8");
+    expect(source).toContain("robinhood_exit_check");
+    // The old text promised the model that a live sell simulation was simply not covered.
+    expect(source).not.toMatch(/LP-lock status and a live sell simulation are \*not covered\*/);
+    // Every branch of the new result has to carry its reading rule.
+    expect(source).toContain("EXIT-CLEARS");
+    expect(source).toContain("CANNOT-EXIT");
+  });
+
   it("ships the probe source so the injected bytecode can be audited, not trusted", () => {
     const manifest = JSON.parse(readFileSync("packages/bugglo/package.json", "utf8"));
     expect(manifest.files).toContain("BuggloExitProbe.sol");
