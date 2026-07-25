@@ -41,6 +41,8 @@ function poolReads() {
     const data = String(args.data || "");
     if (args.to === POOL && data.startsWith("0x0dfe1681")) return { data: addressWord(COUNTER) }; // token0()
     if (args.to === POOL && data.startsWith("0xd21220a7")) return { data: addressWord(TOKEN) }; //  token1()
+    if (args.to === POOL && data.startsWith("0x3850c7bd")) return { data: word("1") }; //           slot0()  — V3 fingerprint
+    if (args.to === POOL && data.startsWith("0x1a686502")) return { data: word("de0b6b3a7640000") }; // liquidity() — non-zero
     if (data.startsWith("0x313ce567")) return { data: word("12") }; //                              decimals()
     return null;
   };
@@ -261,5 +263,123 @@ describe("simulateExit entry points", () => {
     const manifest = JSON.parse(readFileSync("packages/bugglo/package.json", "utf8"));
     expect(manifest.files).toContain("BuggloExitProbe.sol");
     expect(existsSync("packages/bugglo/BuggloExitProbe.sol")).toBe(true);
+  });
+});
+
+/* Audit findings, pinned. Both came from decimals(), which the token's deployer chooses and which
+   this file turns into an exponent. Neither was a honeypot; both made an honest token look like
+   one, which on this product is the worst class of bug there is. */
+describe("simulateExit — attacker-controlled decimals", () => {
+  const withDecimals = (decHex) => {
+    withMarket();
+    const reads = poolReads();
+    const MAGIC = 123456789012345678901234567890n;
+    CHAIN_CALL.mockImplementation(async (args) => {
+      const data = String(args.data || "");
+      if (args.to === POOL && data.startsWith("0x0dfe1681")) return { data: addressWord(COUNTER) };
+      if (args.to === POOL && data.startsWith("0xd21220a7")) return { data: addressWord(TOKEN) };
+      if (data.startsWith("0x313ce567")) return { data: word(decHex) };
+      if (args.stateOverride?.some((o) => o.code)) return { data: word("1") + word("1").slice(2) };
+      return { data: word(MAGIC.toString(16)) };
+    });
+    void reads;
+  };
+
+  /* 78 decimals puts 10**decimals past uint256, viem refuses to encode it, and the throw used to
+     land in the catch that reports CANNOT-EXIT. A token earned the harshest verdict this tool has
+     by declaring a number. */
+  it("does not accuse a token of being untradeable because it declared absurd decimals", async () => {
+    for (const decHex of ["4e", "ff"]) {
+      withDecimals(decHex);
+      const result = await simulateExit(TOKEN);
+      expect(result.status).toBe("UNKNOWN");
+      expect(result.status).not.toBe("CANNOT-EXIT");
+      expect(result.note).toMatch(/not a finding against the token/i);
+    }
+  });
+
+  /* 77 encodes but passes int256.max, and Solidity's int256(uint256) cast is unchecked: it wraps
+     negative, and V3 reads a negative amountSpecified as exact-OUTPUT. The probe would have
+     answered a different question and looked like it worked. */
+  it("refuses a size that would wrap the int256 cast into an exact-output swap", async () => {
+    withDecimals("4d"); // 77
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+  });
+
+  it("still runs normally for real-world decimals", async () => {
+    for (const decHex of ["06", "08", "12"]) { // 6, 8, 18
+      withDecimals(decHex);
+      const result = await simulateExit(TOKEN);
+      expect(result.status).toBe("EXIT-CLEARS");
+    }
+  });
+});
+
+describe("BuggloExitProbe.sol", () => {
+  const source = readFileSync("packages/bugglo/BuggloExitProbe.sol", "utf8");
+
+  it("bounds amountIn below int256.max so the unchecked cast cannot flip the swap direction", () => {
+    expect(source).toMatch(/require\(amountIn <= uint256\(type\(int256\)\.max\)/);
+  });
+
+  it("cannot be re-entered by the hostile token it is measuring", () => {
+    expect(source).toMatch(/require\(!probing/);
+    expect(source).toMatch(/probing = true/);
+    expect(source).toMatch(/probing = false/);
+  });
+
+  it("only accepts the callback from the pool it is currently probing", () => {
+    expect(source).toMatch(/require\(msg\.sender == activePool/);
+  });
+});
+
+/* Two more audit findings, both measured on live chain-4663 pools. Neither token was a honeypot;
+   both were being reported as CANNOT-EXIT, which the system prompt tells the agent to lead with
+   and to rank above every green line in a rug check. */
+describe("simulateExit — pools it cannot drive must not become accusations", () => {
+  const MAGIC = 123456789012345678901234567890n;
+
+  const poolWhere = (overrides) => {
+    withMarket();
+    CHAIN_CALL.mockImplementation(async (args) => {
+      const data = String(args.data || "");
+      if (args.to === POOL && data.startsWith("0x0dfe1681")) return { data: addressWord(COUNTER) };
+      if (args.to === POOL && data.startsWith("0xd21220a7")) return { data: addressWord(TOKEN) };
+      if (args.to === POOL && data.startsWith("0x3850c7bd")) return overrides.slot0();
+      if (args.to === POOL && data.startsWith("0x1a686502")) return overrides.liquidity();
+      if (data.startsWith("0x313ce567")) return { data: word("12") };
+      if (args.stateOverride?.some((o) => o.code)) return { data: word("1") + word("1").slice(2) };
+      return { data: word(MAGIC.toString(16)) };
+    });
+  };
+
+  /* token0()/token1() answer on plenty of non-V3 pools. Driving one with V3's swap() signature
+     just reverts, and that revert was being read as "you cannot sell". Two pools DexScreener
+     labels "uniswap" on chain 4663 behave exactly this way. */
+  it("is UNKNOWN, not CANNOT-EXIT, when the pool is pair-shaped but not V3", async () => {
+    poolWhere({
+      slot0: () => { throw new Error("execution reverted"); },
+      liquidity: () => { throw new Error("execution reverted"); },
+    });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+    expect(result.note).toMatch(/not a finding against the token/i);
+  });
+
+  /* A V3 pool with no liquidity in range swaps nothing, so the callback is owed nothing and the
+     probe's own require(owed > 0) reverts. "Nothing to sell into right now" is a fact about the
+     pool's tick, not evidence the token traps sellers. */
+  it("is UNKNOWN, not CANNOT-EXIT, when the pool has zero active liquidity", async () => {
+    poolWhere({ slot0: () => ({ data: word("1") }), liquidity: () => ({ data: word("0") }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("UNKNOWN");
+    expect(result.note).toMatch(/no active liquidity/i);
+  });
+
+  it("still clears a healthy V3 pool with liquidity in range", async () => {
+    poolWhere({ slot0: () => ({ data: word("1") }), liquidity: () => ({ data: word("de0b6b3a7640000") }) });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("EXIT-CLEARS");
   });
 });

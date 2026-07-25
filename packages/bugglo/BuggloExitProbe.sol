@@ -80,6 +80,16 @@ contract BuggloExitProbe {
     address private activePool;
     address private activeToken;
 
+    /* The token being probed is hostile by assumption — that is the entire point of probing it —
+       and the callback hands it control by calling its transfer(). A token that re-enters
+       probeExit from inside that transfer would overwrite activePool/activeToken and settle a
+       second swap against the same balances, so the outer call's before/after measurement would
+       describe a trade it did not make. The pool's own accounting still has to pass, so this
+       cannot manufacture a clearing sell out of a blocked one, but it can inflate the amount we
+       report as received. A measurement that can be steered by the thing being measured is not a
+       measurement. */
+    bool private probing;
+
     /**
      * Sell `amountIn` of `token` into `pool` and report what actually came back.
      *
@@ -96,6 +106,16 @@ contract BuggloExitProbe {
         uint160 sqrtPriceLimitX96,
         address counterToken
     ) external returns (uint256 received, uint256 paid) {
+        require(!probing, "reentrant probe");
+        probing = true;
+
+        /* int256(uint256) is an UNCHECKED conversion in Solidity 0.8 — it wraps rather than
+           reverting. Above int256.max the cast below flips negative, and a negative
+           amountSpecified means the OPPOSITE swap to V3: exact-output instead of exact-input. The
+           call would succeed and answer a question nobody asked. amountIn derives from the token's
+           own decimals(), which the deployer chooses, so this bound is on attacker-reachable input. */
+        require(amountIn <= uint256(type(int256).max), "amountIn exceeds int256");
+
         activePool = pool;
         activeToken = token;
 
@@ -117,6 +137,8 @@ contract BuggloExitProbe {
            revert is the honest outcome. Nothing about that state should produce a number. */
         received = counterAfter - counterBefore;
         paid = tokenBefore - tokenAfter;
+
+        probing = false;
     }
 
     /* The pool calls this to collect its input. Paying with a real transfer is the entire point:

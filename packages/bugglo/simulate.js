@@ -248,36 +248,40 @@ export async function simulateSell(rawAddress) {
 export const EXIT_PROBE_RUNTIME =
   "0x" +
   "608060405234801561000f575f80fd5b5060043610610034575f3560e01c806312371d7f14610038578063fa461e33146100" +
-  "64575b5f80fd5b61004b61004636600461043f565b610079565b6040805192835260208301919091520160405180910390f3" +
-  "5b6100776100723660046104b4565b6102fc565b005b5f80546001600160a01b038881166001600160a01b03199283161783" +
-  "55600180549189169190921681179091556040516370a0823160e01b8152306004820152829182916370a082319060240160" +
-  "2060405180830381865afa1580156100e1573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081" +
-  "01906101059190610530565b6040516370a0823160e01b81523060048201529091505f906001600160a01b038616906370a0" +
-  "823190602401602060405180830381865afa15801561014c573d5f803e3d5ffd5b505050506040513d601f19601f82011682" +
-  "0180604052508101906101709190610530565b604051630251596160e31b8152306004820152891515602482015260448101" +
-  "8990526001600160a01b03888116606483015260a060848301525f60a4830152919250908b169063128acb089060c4016040" +
-  "8051808303815f875af11580156101da573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101" +
-  "906101fe9190610547565b50506040516370a0823160e01b81523060048201525f906001600160a01b038716906370a08231" +
-  "90602401602060405180830381865afa158015610244573d5f803e3d5ffd5b505050506040513d601f19601f820116820180" +
-  "604052508101906102689190610530565b6040516370a0823160e01b81523060048201529091505f906001600160a01b038c" +
-  "16906370a0823190602401602060405180830381865afa1580156102af573d5f803e3d5ffd5b505050506040513d601f1960" +
-  "1f820116820180604052508101906102d39190610530565b90506102df8383610569565b95506102eb8185610569565b9450" +
-  "50505050965096945050505050565b5f546001600160a01b0316331461034e5760405162461bcd60e51b8152602060048201" +
-  "5260116024820152703ab732bc3832b1ba32b21031b0b63632b960791b60448201526064015b60405180910390fd5b5f8085" +
-  "1361035c578361035e565b845b90505f811361039e5760405162461bcd60e51b815260206004820152600c60248201526b1b" +
-  "9bdd1a1a5b99c81bddd95960a21b6044820152606401610345565b6001545f5460405163a9059cbb60e01b81526001600160" +
-  "a01b0391821660048201526024810184905291169063a9059cbb906044016020604051808303815f875af11580156103ef57" +
-  "3d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610413919061058e565b505050505050" +
-  "565b6001600160a01b038116811461042f575f80fd5b50565b801515811461042f575f80fd5b5f805f805f8060c087890312" +
-  "15610454575f80fd5b863561045f8161041b565b9550602087013561046f8161041b565b9450604087013561047f81610432" +
-  "565b93506060870135925060808701356104968161041b565b915060a08701356104a68161041b565b809150509295509295" +
-  "509295565b5f805f80606085870312156104c7575f80fd5b8435935060208501359250604085013567ffffffffffffffff81" +
-  "11156104eb575f80fd5b8501601f810187136104fb575f80fd5b803567ffffffffffffffff811115610511575f80fd5b8760" +
-  "20828401011115610522575f80fd5b949793965060200194505050565b5f60208284031215610540575f80fd5b5051919050" +
-  "565b5f8060408385031215610558575f80fd5b505080516020909101519092909150565b8181038181111561058857634e48" +
-  "7b7160e01b5f52601160045260245ffd5b92915050565b5f6020828403121561059e575f80fd5b81516105a981610432565b" +
-  "939250505056fea26469706673582212205ca8f7fa20664de4b6847270eba29930482c85456dabae31d156d37363e368ee64" +
-  "736f6c634300081a0033";
+  "64575b5f80fd5b61004b610046366004610504565b610079565b6040805192835260208301919091520160405180910390f3" +
+  "5b610077610072366004610579565b6103c6565b005b6001545f908190600160a01b900460ff16156100ce5760405162461b" +
+  "cd60e51b815260206004820152600f60248201526e7265656e7472616e742070726f626560881b60448201526064015b6040" +
+  "5180910390fd5b6001805460ff60a01b1916600160a01b1790556001600160ff1b038511156101385760405162461bcd60e5" +
+  "1b815260206004820152601760248201527f616d6f756e74496e206578636565647320696e74323536000000000000000000" +
+  "60448201526064016100c5565b5f80546001600160a01b038a81166001600160a01b031992831617835560018054918b1691" +
+  "90921681179091556040516370a0823160e01b81523060048201526370a0823190602401602060405180830381865afa1580" +
+  "1561019c573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906101c091906105f5565b60" +
+  "40516370a0823160e01b81523060048201529091505f906001600160a01b038616906370a082319060240160206040518083" +
+  "0381865afa158015610207573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061022b91" +
+  "906105f5565b604051630251596160e31b81523060048201528915156024820152604481018990526001600160a01b038881" +
+  "16606483015260a060848301525f60a4830152919250908b169063128acb089060c40160408051808303815f875af1158015" +
+  "610295573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102b9919061060c565b5050" +
+  "6040516370a0823160e01b81523060048201525f906001600160a01b038716906370a0823190602401602060405180830381" +
+  "865afa1580156102ff573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610323919061" +
+  "05f5565b6040516370a0823160e01b81523060048201529091505f906001600160a01b038c16906370a08231906024016020" +
+  "60405180830381865afa15801561036a573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101" +
+  "9061038e91906105f5565b905061039a838361062e565b95506103a6818561062e565b6001805460ff60a01b19169055959c" +
+  "959b50949950505050505050505050565b5f546001600160a01b031633146104135760405162461bcd60e51b815260206004" +
+  "82015260116024820152703ab732bc3832b1ba32b21031b0b63632b960791b60448201526064016100c5565b5f8085136104" +
+  "215783610423565b845b90505f81136104635760405162461bcd60e51b815260206004820152600c60248201526b1b9bdd1a" +
+  "1a5b99c81bddd95960a21b60448201526064016100c5565b6001545f5460405163a9059cbb60e01b81526001600160a01b03" +
+  "91821660048201526024810184905291169063a9059cbb906044016020604051808303815f875af11580156104b4573d5f80" +
+  "3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906104d89190610653565b505050505050565b60" +
+  "01600160a01b03811681146104f4575f80fd5b50565b80151581146104f4575f80fd5b5f805f805f8060c087890312156105" +
+  "19575f80fd5b8635610524816104e0565b95506020870135610534816104e0565b94506040870135610544816104f7565b93" +
+  "5060608701359250608087013561055b816104e0565b915060a087013561056b816104e0565b809150509295509295509295" +
+  "565b5f805f806060858703121561058c575f80fd5b8435935060208501359250604085013567ffffffffffffffff81111561" +
+  "05b0575f80fd5b8501601f810187136105c0575f80fd5b803567ffffffffffffffff8111156105d6575f80fd5b8760208284" +
+  "010111156105e7575f80fd5b949793965060200194505050565b5f60208284031215610605575f80fd5b5051919050565b5f" +
+  "806040838503121561061d575f80fd5b505080516020909101519092909150565b8181038181111561064d57634e487b7160" +
+  "e01b5f52601160045260245ffd5b92915050565b5f60208284031215610663575f80fd5b815161066e816104f7565b939250" +
+  "505056fea264697066735822122064facd092912230b010b011aaa8d02ae302f58952f2cac0f3a816df463593c3f64736f6c" +
+  "634300081a0033";
 
 /* The probe answers with two uint256s, so a successful call returns EXACTLY 64 bytes.
  *
@@ -304,6 +308,11 @@ const POOL_TOKENS = [
 const DECIMALS = [
   { name: "decimals", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
 ];
+/* The two calls that actually identify a V3 pool and tell us whether it can trade right now.
+   Raw selectors rather than ABI entries because slot0() returns seven packed fields we do not
+   need — only whether it answers at all. */
+const SLOT0_SELECTOR = "0x3850c7bd"; //     slot0()
+const LIQUIDITY_SELECTOR = "0x1a686502"; // liquidity()
 const PROBE_EXIT = [
   {
     name: "probeExit",
@@ -334,11 +343,11 @@ function unknownExit(note, extra = {}) {
  *   UNKNOWN      no pool, no balance slot, no state-override support, or a probe that did not
  *                answer in the expected shape. Never PASS.
  */
-export async function simulateExit(rawAddress) {
+export async function simulateExit(rawAddress, marketOverride = null) {
   if (!isAddress(rawAddress)) return { ok: false, error: "That is not a valid EVM address." };
   const token = getAddress(rawAddress);
 
-  const market = await getMarket(token);
+  const market = marketOverride || (await getMarket(token));
   const pairAddress = market?.ok && market.hasMarket ? market.pairAddress : null;
   if (!pairAddress || !isAddress(pairAddress)) {
     return unknownExit(
@@ -354,21 +363,46 @@ export async function simulateExit(rawAddress) {
   let token0;
   let token1;
   let decimals;
+  let activeLiquidity;
   try {
     const client = chainClient();
-    const [t0, t1, dec] = await Promise.all([
+    /* token0()/token1() are NOT a V3 fingerprint — V2 pairs and most other AMMs answer them too,
+       and driving a non-V3 pool with V3's swap() signature just reverts. Read at the same time as
+       the thing that IS specific to V3, so a pool that merely looks pair-shaped cannot get as far
+       as the probe. Measured on chain 4663: two pools DexScreener reports as "uniswap" answer
+       token0()/token1() and revert on both slot0() and liquidity(), and before this check they
+       were reported as CANNOT-EXIT — an accusation earned by not being a V3 pool. */
+    const [t0, t1, dec, slot0, liquidity] = await Promise.all([
       client.call({ to: pool, data: encodeFunctionData({ abi: POOL_TOKENS, functionName: "token0", args: [] }) }),
       client.call({ to: pool, data: encodeFunctionData({ abi: POOL_TOKENS, functionName: "token1", args: [] }) }),
       client.call({ to: token, data: encodeFunctionData({ abi: DECIMALS, functionName: "decimals", args: [] }) }),
+      client.call({ to: pool, data: SLOT0_SELECTOR }),
+      client.call({ to: pool, data: LIQUIDITY_SELECTOR }),
     ]);
+    if (!slot0?.data || slot0.data === "0x") throw new Error("notV3");
     token0 = getAddress(`0x${String(t0?.data || "").slice(26, 66)}`);
     token1 = getAddress(`0x${String(t1?.data || "").slice(26, 66)}`);
     decimals = Number(BigInt(dec?.data || "0x12"));
+    activeLiquidity = BigInt(liquidity?.data || "0x0");
   } catch {
-    /* A pair that answers neither token0() nor slot0() is not a V3 pool we can drive. Some other
-       pool type may well be sellable; we simply cannot prove it from here. */
+    /* A pair that does not answer slot0() is not a V3 pool we can drive. Some other pool type may
+       well be perfectly sellable; we simply cannot prove it from here. */
     return unknownExit(
-      "The pool does not expose the Uniswap V3 interface, so an exit cannot be simulated from here. UNKNOWN, not PASS."
+      "The pool does not expose the Uniswap V3 interface, so an exit cannot be simulated from here. " +
+        "That is a limit of this simulation, not a finding against the token. UNKNOWN, not PASS."
+    );
+  }
+
+  /* Zero active liquidity means the swap would move nothing, the callback would be owed nothing,
+     and the probe's own `require(owed > 0)` would revert — which the catch below would have
+     reported as CANNOT-EXIT. "There is nothing in range to sell into" is a fact about the pool's
+     current tick, not evidence that the token traps sellers, and the two must not share a verdict.
+     Measured on chain 4663: a token with $14k of reported liquidity and liquidity() == 0. */
+  if (activeLiquidity === 0n) {
+    return unknownExit(
+      "The pool reports no active liquidity at the current price, so there is nothing to sell into " +
+        "and the swap cannot be simulated. That is a fact about the pool right now, not evidence " +
+        "against the token. UNKNOWN, not PASS."
     );
   }
 
@@ -390,6 +424,26 @@ export async function simulateExit(rawAddress) {
   }
   if (!slot) {
     return unknownExit("Could not locate the token's balance storage slot, so a funded exit could not be simulated. UNKNOWN, not PASS.");
+  }
+
+  /* decimals() is read from the token, so a deployer picks it, and it is about to become an
+     EXPONENT. Left unbounded it is an injection point rather than a field:
+       - at 78 and above, 10**decimals exceeds uint256 and viem refuses to encode it. That throw
+         lands in the catch below, which reports CANNOT-EXIT — so a token could earn the harshest
+         verdict this tool has by declaring a number, with no honeypot anywhere. Reproduced in
+         tests/buggloExitProbe.test.js.
+       - at 77 it still encodes but passes int256.max, and Solidity's int256(uint256) cast is
+         unchecked, so it wraps negative and V3 reads a negative amountSpecified as exact-OUTPUT.
+         The probe would answer a different question and look like it worked.
+     Real ERC-20s live at 6, 8 or 18; 36 is already absurd and leaves room for the genuinely odd.
+     Outside that, the honest answer is that we did not run the check. */
+  const MAX_SANE_DECIMALS = 36;
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > MAX_SANE_DECIMALS) {
+    return unknownExit(
+      `The token reports ${decimals} decimals, which is outside the range this simulation can size a ` +
+        "trade in. That is a fact about its metadata, not evidence about selling — UNKNOWN, not PASS, " +
+        "and not a finding against the token."
+    );
   }
 
   /* Sized in whole tokens rather than as a share of supply: a fixed fraction of a large supply is
