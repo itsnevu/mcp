@@ -33,6 +33,7 @@
     "simulate.js",
     "registry.js",
     "gate.js",
+    "BuggloExitProbe.sol",
     "README.md"
   ],
   "keywords": [
