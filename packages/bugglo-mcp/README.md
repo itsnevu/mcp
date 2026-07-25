@@ -1,8 +1,5 @@
 # bugglo-mcp
 
-[![npm](https://img.shields.io/npm/v/bugglo-mcp)](https://www.npmjs.com/package/bugglo-mcp)
-[![license](https://img.shields.io/badge/license-MIT-blue)](https://github.com/itsnevu/mcp/blob/main/LICENSE)
-
 **Robinhood Chain (4663), read straight from the chain. No API key, no account, no payment.**
 
 Point a general-purpose chain tool at a Robinhood Chain contract and it will tell you — truthfully,
@@ -67,40 +64,29 @@ That's the whole config. There is no second step.
 | `bugglo_market` | Liquidity, FDV, 24h volume, buy/sell counts, pool age, and the two ratios that matter. |
 | `bugglo_limits` | **What Bugglo cannot see.** Call this before telling anyone a token looks safe. |
 
-### The firewall
-
-An agent with a wallet is the softest target in DeFi: it acts on instructions injected into whatever
-it reads, and it cannot see a chain it never read. So the safety check belongs *outside* the model —
-a gate the agent has to pass before it swaps, rather than advice it is free to ignore.
-
-| Tool | What it answers |
-|---|---|
-| `bugglo_trade_gate` | **The enforcer.** One machine-readable decision — `ALLOW` / `BLOCK` / `UNKNOWN` — with every reason sorted worst-first. |
-| `bugglo_simulate_sell` | The read-only sell simulation on its own. |
-| `bugglo_rwa_verify` | `OFFICIAL`, `IMPOSTOR-SUSPECT`, or `NOT-IN-REGISTRY` against the pinned official stock-token list — the chain is permissionless, so anyone can mint an ERC-20 called "AAPL". |
-
-`ALLOW` never means safe. It means no blocker was **proven**, and the payload says so in those words.
-`UNKNOWN` must be treated exactly like `BLOCK` before anything auto-executes: a firewall that fails
-open is not a firewall.
-
 ---
 
 ## The part other tools leave out
 
 Every result ships the list of checks that **did not run**, and why. On every result — passed or failed.
 
-Three of them never run on this chain, and every report names them rather than omitting them:
+```
+VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
 
-| Not checked | Why |
-|---|---|
-| holder concentration | Needs an indexer. No indexer covers this chain yet. |
-| liquidity lock | Needs a locker registry. This chain has none, so a locked pool and an unlocked one look identical from here. |
-| honeypot / sell simulation | A passing market check is not proof that you can exit. |
+  PASS    Not an upgradeable proxy
+          No EIP-1967 implementation slot — the code cannot be swapped out from under you.
+  PASS    Sells are going through
+          276 sells against 419 buys in 24h — people are getting out, so it is not a hard honeypot.
+  UNKNOWN Ownership unclear
+          There is no standard owner() function. That does NOT mean ownership is renounced — the
+          contract may use roles or an embedded admin that I cannot see from here.
 
-No sample report is reproduced here. Any report printed into a README is a reading that has already
-expired — its liquidity has moved, its buy and sell counts have moved — and a server whose entire
-argument is "UNKNOWN is not PASS" cannot ship a frozen PASS as illustration. Point your agent at an
-address and read the live one.
+NOT CHECKED — these are not passes
+  holder concentration        Needs an indexer. No indexer covers this chain yet.
+  liquidity lock              Needs a locker registry. This chain has none, so a locked pool and an
+                              unlocked one look identical from here.
+  honeypot / sell simulation  Not run. A passing market check is not proof that you can exit.
+```
 
 Three rules this server will not break:
 

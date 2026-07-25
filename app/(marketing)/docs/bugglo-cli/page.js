@@ -46,12 +46,9 @@ const commands = [
   { cmd: "bugglo powers <address>", out: "Privileged selectors present in the deployed bytecode — mint, pause, blacklist and their relatives." },
   { cmd: "bugglo market <address>", out: "DexScreener liquidity, FDV, volume, buy/sell counts, pool age, and the ratios that matter." },
   { cmd: "bugglo limits", out: "What this package cannot do. Run it before you tell anyone a token looks safe." },
-  { cmd: "bugglo gate <address>", out: "The firewall. ALLOW / BLOCK / UNKNOWN, reasons worst-first — and it exits 0 only on ALLOW, so a script can gate on it." },
-  { cmd: "bugglo sim <address>", out: "The read-only sell simulation on its own." },
-  { cmd: "bugglo registry <address>", out: "OFFICIAL, IMPOSTOR-SUSPECT, or NOT-IN-REGISTRY against the pinned official stock-token list." },
 ];
 
-/* The ten tools bugglo-mcp exposes. Mirrors packages/bugglo-mcp/server.js. */
+/* The seven tools bugglo-mcp exposes. Mirrors packages/bugglo-mcp/server.js. */
 const mcpTools = [
   {
     name: "bugglo_rug_check",
@@ -87,21 +84,6 @@ const mcpTools = [
     name: "bugglo_limits",
     line: "What are you not telling me?",
     desc: "The checks that cannot run at all. An agent that calls this before rendering a verdict is an agent that will not lie to its user by omission.",
-  },
-  {
-    name: "bugglo_trade_gate",
-    line: "May I trade this — yes or no?",
-    desc: "The enforcer. One machine-readable decision — ALLOW, BLOCK, or UNKNOWN — with every reason sorted worst-first. ALLOW never means safe; it means no blocker was proven, and the payload says so in those words. UNKNOWN must be treated exactly like BLOCK before anything auto-executes, because a firewall that fails open is not a firewall.",
-  },
-  {
-    name: "bugglo_simulate_sell",
-    line: "Could I actually get back out?",
-    desc: "The read-only sell simulation on its own. A simulation that could not run is not a simulation that passed, and it reports that difference rather than smoothing it over.",
-  },
-  {
-    name: "bugglo_rwa_verify",
-    line: "Is this the real tokenized stock, or an impostor?",
-    desc: "Checks an address against the pinned official stock-token registry. The chain is permissionless, so anyone can mint an ERC-20 called AAPL — a ticker collision at a different address is the signal that catches it.",
   },
 ];
 
@@ -142,7 +124,7 @@ const faqs = [
   },
   {
     question: "Can my own AI agent call it?",
-    answer: "Yes — that is what bugglo-mcp is. Add it to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP client with a four-line config, and the agent gets ten tools against chain 4663 — seven that read the chain, and three that gate a trade before it happens. It is only an adapter: the chain logic stays in bugglo, so the answers cannot disagree with the CLI's.",
+    answer: "Yes — that is what bugglo-mcp is. Add it to Claude Desktop, Claude Code, Cursor, Windsurf, or any MCP client with a four-line config, and the agent gets seven tools against chain 4663. It is only an adapter: the chain logic stays in bugglo, so the answers cannot disagree with the CLI's.",
   },
   {
     question: "Is it safe to run against a token I do not trust?",
@@ -429,20 +411,25 @@ npx bugglo 0x2103…`}</Code>
           <h2 className={styles.sectionTitle}>The verdict is deliberately wordy</h2>
         </div>
 
-        <p className={styles.lead}>
-          Every signal comes back as one of four words — <strong>PASS</strong>, <strong>WARN</strong>,{" "}
-          <strong>FAIL</strong>, or <strong>UNKNOWN</strong> — sorted worst-first, so whatever is not a
-          pass sits at the top and a reader who stops after one line has still read the one that
-          matters. Below them sits the list of checks that could not run at all. There is no numeric
-          score anywhere in it.
-        </p>
-        <p className={styles.lead}>
-          No sample report is printed on this page on purpose. A pasted report is a reading that was
-          true at most on the day it was pasted — the liquidity has moved since, and so have the buy
-          and sell counts. A tool whose whole argument is that a stale reading is worse than none
-          cannot illustrate itself with one. Run it against an address and the output is current by
-          construction.
-        </p>
+        <Code label="npx bugglo 0x2103…9bf1">{`BUGGLO — rug check
+Robinhood Chain (chain 4663)
+0x2103...9bf1
+Robin Hood (FOX), 18 decimals
+
+VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
+
+  UNKNOWN Ownership unclear
+          There is no standard owner() function. That does NOT mean ownership is
+          renounced — the contract may use roles or an embedded admin that I cannot see.
+  PASS    Contract exists
+          4,830 bytes of bytecode on Robinhood Chain (chain 4663).
+  PASS    Sells are going through
+          People are getting out, so it is not a hard honeypot.
+
+NOT CHECKED — these are not passes
+  holder concentration
+  liquidity lock
+  honeypot / sell simulation`}</Code>
 
         <div className={styles.grid} style={{ marginTop: 18 }}>
           <div className={styles.card}>
@@ -519,7 +506,7 @@ npx bugglo 0x2103…`}</Code>
           <div className={styles.eyebrow}>For agents</div>
           <h2 className={styles.sectionTitle}>The same engine, as an MCP server</h2>
           <p className={styles.lead}>
-            <code className={styles.inline}>bugglo-mcp</code> hands the ten tools below to Claude
+            <code className={styles.inline}>bugglo-mcp</code> hands the seven tools below to Claude
             Desktop, Claude Code, Cursor, Windsurf, or whatever you are building. It is only an
             adapter — the chain logic stays in{" "}
             <code className={styles.inline}>bugglo</code>, so the CLI, the library, and your agent

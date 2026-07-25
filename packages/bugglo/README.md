@@ -1,8 +1,5 @@
 # bugglo
 
-[![npm](https://img.shields.io/npm/v/bugglo)](https://www.npmjs.com/package/bugglo)
-[![license](https://img.shields.io/badge/license-MIT-blue)](https://github.com/itsnevu/mcp/blob/main/LICENSE)
-
 **Robinhood Chain (4663), read straight from the chain. No API key, no account, no backend.**
 
 `bugglo` is a terminal and library for asking the questions a holder asks before touching a token:
@@ -55,35 +52,11 @@ npx bugglo --rpc-list https://rpc.one,https://rpc.two 0x2103faA9D1762e27a716C617
 | `bugglo market <address>` | DexScreener liquidity, FDV, volume, buy/sell counts, pool age, and ratios. |
 | `bugglo limits` | Checks this package cannot perform from bare RPC + public DEX data. |
 
-## The firewall
-
-An AI agent with a wallet is the softest target in DeFi: it will act on instructions injected into
-whatever it reads, and it cannot see a chain it never read. So the safety check belongs *outside*
-the model, as a gate the agent has to pass before it swaps — advisor becomes enforcer.
-
-| Command | Output |
-|---|---|
-| `bugglo gate <address>` | `ALLOW` / `BLOCK` / `UNKNOWN`, with every reason sorted worst-first. |
-| `bugglo sim <address>` | The read-only sell simulation on its own. |
-| `bugglo registry <address>` | `OFFICIAL`, `IMPOSTOR-SUSPECT`, or `NOT-IN-REGISTRY` against the pinned official stock-token list. |
-
-**The exit code is the point.** `bugglo gate` exits `0` only on `ALLOW`, so a script can gate on it:
-
-```bash
-npx bugglo gate 0xYourTokenAddress || echo "not trading"
-```
-
-`BLOCK` and `UNKNOWN` both exit `1`, deliberately. A firewall that fails open is not a firewall, so
-an address whose safety could not be *proven* is treated exactly like one that was proven dangerous.
-And `ALLOW` never means "safe" — it means no blocker was proven, which is a different sentence, and
-the output says so every time rather than leaving it to a footnote.
-
 Options:
 
 ```bash
 --json                 Print JSON where supported
 --full                 Print the full address in the rug-check report
---side <buy|sell>      Which side the trade is on (gate only; default buy)
 --rpc <url>            Override the Robinhood Chain RPC
 --rpc-list <urls>      Comma-separated fallback RPC URLs; first healthy chain 4663 endpoint wins
 --timeout <ms>         Chain RPC timeout
@@ -93,25 +66,32 @@ Options:
 --version              Show version
 ```
 
-## What a report contains
+## Example report
 
-Every signal is rendered as one of four words, and the report always closes with the checks that
-did **not** run:
+```text
+BUGGLO — rug check
+Robinhood Chain (chain 4663)
+0x2103...9bf1
+Robin Hood (FOX), 18 decimals
 
-| Word | Meaning |
-|---|---|
-| `PASS` | The check ran and found nothing wrong. |
-| `WARN` | The check ran and found something you should look at. |
-| `FAIL` | The check ran and found a blocker. |
-| `UNKNOWN` | The check could **not** run. This is never a pass. |
+VERDICT  NO RED FLAGS IN WHAT I COULD CHECK
 
-The verdict is intentionally wordy, and there is no numeric score — a number computed from four
-measured signals and three unknowns launders ignorance into false confidence. Rounding a report up
-to "safe" is the bug this package exists to avoid.
+  UNKNOWN Ownership unclear
+          There is no standard owner() function. That does NOT mean ownership is
+          renounced — the contract may use roles or an embedded admin that I cannot see.
+  PASS    Contract exists
+          4,830 bytes of bytecode on Robinhood Chain (chain 4663).
+  PASS    Sells are going through
+          People are getting out, so it is not a hard honeypot.
 
-No sample output is reproduced here on purpose. A pasted report is a reading that was true at most
-on the day it was pasted, and this package exists to argue that a stale reading is worse than none.
-Run it against an address yourself and the output will be current by construction.
+NOT CHECKED — these are not passes
+  holder concentration
+  liquidity lock
+  honeypot / sell simulation
+```
+
+The verdict is intentionally wordy. Rounding it up to "safe" is the bug this package exists to
+avoid.
 
 ## Library API
 

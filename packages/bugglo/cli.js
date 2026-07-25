@@ -5,15 +5,12 @@
  * command must not grow separate ideas of what "rug check" means.
  */
 
-const VERSION = "0.3.0";
+const VERSION = "0.2.0";
 const DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_CHAIN_ID = 4663;
 const CHAIN_ID_HEX = `0x${ROBINHOOD_CHAIN_ID.toString(16)}`;
 
-const COMMANDS = new Set([
-  "rug", "rug-check", "check", "info", "token", "ownership", "owner", "proxy", "powers", "market", "limits",
-  "gate", "firewall", "sim", "simulate", "registry", "rwa",
-]);
+const COMMANDS = new Set(["rug", "rug-check", "check", "info", "token", "ownership", "owner", "proxy", "powers", "market", "limits"]);
 
 function usage() {
   return `bugglo ${VERSION}
@@ -30,19 +27,9 @@ Usage
   bugglo market <address>          DexScreener liquidity and trading data
   bugglo limits                    Checks Bugglo cannot measure
 
-Firewall — the pre-trade gate
-  bugglo gate <address>            ALLOW / BLOCK / UNKNOWN, worst reason first
-  bugglo sim <address>             Read-only sell simulation on its own
-  bugglo registry <address>        Check against the official stock-token list
-
-  Exit code 0 only on ALLOW, so a script can gate on it. BLOCK and UNKNOWN both
-  exit 1: an address whose safety could not be proven must be treated exactly
-  like a blocked one before anything auto-executes.
-
 Options
   --json                           Print machine-readable JSON
   --full                           Print the full address in reports
-  --side <buy|sell>                Which way the trade goes (gate only, default buy)
   --rpc <url>                      Override the Robinhood Chain RPC
   --rpc-list <urls>                Comma-separated RPC fallbacks, first healthy chain 4663 wins
   --timeout <ms>                   Override chain RPC timeout
@@ -53,8 +40,7 @@ Options
 
 Examples
   npx bugglo 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
-  npx bugglo gate 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1 || echo "do not trade"
-  npx bugglo --json gate 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
+  npx bugglo --json market 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
   npx bugglo --rpc https://your-rpc.example rug 0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1
   npx bugglo --rpc-list https://rpc.one,https://rpc.two 0x...
 
@@ -86,11 +72,7 @@ function parseArgs(argv) {
     else if (arg === "--json") opts.json = true;
     else if (arg === "--full") opts.full = true;
     else if (arg === "--no-color") opts.color = false;
-    else if (arg === "--side" || arg.startsWith("--side=")) {
-      const value = arg === "--side" ? argv[++i] : arg.slice("--side=".length);
-      if (value !== "buy" && value !== "sell") return { error: "--side must be buy or sell" };
-      opts.side = value;
-    } else if (arg === "--rpc") {
+    else if (arg === "--rpc") {
       const value = argv[++i];
       if (!value) return { error: "--rpc needs a URL" };
       opts.rpc = value;
@@ -128,9 +110,6 @@ function parseArgs(argv) {
   if (opts.command === "rug-check" || opts.command === "check") opts.command = "rug";
   if (opts.command === "token") opts.command = "info";
   if (opts.command === "owner") opts.command = "ownership";
-  if (opts.command === "firewall") opts.command = "gate";
-  if (opts.command === "simulate") opts.command = "sim";
-  if (opts.command === "rwa") opts.command = "registry";
 
   return opts;
 }
@@ -154,10 +133,6 @@ function numericEnv(name, value) {
   }
   process.env[name] = String(value);
   return true;
-}
-
-function elide(address) {
-  return address && address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
 function parseAddress(raw, isAddress, getAddress) {
@@ -302,54 +277,6 @@ async function main() {
     if (opts.json) printJson(result);
     else console.log(report.renderRugCheck(result, { full: opts.full, paint: outputPaint }));
     if (result.ok === false || result.verdict === "CANNOT CHECK") process.exitCode = 1;
-    return;
-  }
-
-  /* The firewall, at the terminal. Same tradeGate() the MCP server exposes — an agent and a human
-   * must not be able to get different answers about the same address. Exit code is the whole point
-   * of putting it here: a shell script can gate on it, so `bugglo gate` is usable as an actual
-   * pre-trade check and not just something to read. BLOCK and UNKNOWN both exit non-zero, because
-   * an unproven address must be treated exactly like a blocked one before anything auto-executes. */
-  if (opts.command === "gate") {
-    const { tradeGate } = await import("./gate.js");
-    const result = await tradeGate(address, { side: opts.side });
-    if (opts.json) printJson(result);
-    else console.log(report.renderTradeGate(result, { full: opts.full, paint: outputPaint }));
-    if (result.decision !== "ALLOW") process.exitCode = 1;
-    return;
-  }
-
-  if (opts.command === "sim") {
-    const { simulateSell } = await import("./simulate.js");
-    const result = await simulateSell(address);
-    if (opts.json) printJson({ ...common, ...result });
-    else {
-      console.log(`BUGGLO — sell simulation`);
-      console.log(`${opts.full ? address : elide(address)}\n`);
-      if (result.ok === false) console.log(`UNKNOWN  ${result.error}`);
-      else console.log(`${String(result.status || "UNKNOWN").padEnd(7)}  ${result.note}`);
-      console.log("\nA simulation that could not run is not a simulation that passed.");
-    }
-    /* Mirror gate.js exactly: SELLABLE-SO-FAR is the only status that clears, and it clears only
-       because the transfer actually ran. CANNOT-MOVE and UNKNOWN both exit non-zero — a sim that
-       could not run must not read as a pass to a script that only checks $?. */
-    if (result.ok === false || result.status !== "SELLABLE-SO-FAR") process.exitCode = 1;
-    return;
-  }
-
-  if (opts.command === "registry") {
-    const { verifyAgainstRegistry, REGISTRY_META } = await import("./registry.js");
-    const metadata = await chain.getTokenMetadata(address);
-    const result = verifyAgainstRegistry(address, metadata);
-    if (opts.json) printJson({ ...common, ...result, registry: REGISTRY_META });
-    else {
-      console.log(`BUGGLO — stock-token registry`);
-      console.log(`${opts.full ? address : elide(address)}\n`);
-      console.log(`${result.status}\n  ${result.note}\n`);
-      console.log(`Registry snapshot: ${REGISTRY_META.count} entries, ${REGISTRY_META.snapshotDate}, from ${REGISTRY_META.source}.`);
-      console.log("It is partial. NOT-IN-REGISTRY is not proof of an impostor.");
-    }
-    if (result.status === "IMPOSTOR-SUSPECT") process.exitCode = 1;
     return;
   }
 

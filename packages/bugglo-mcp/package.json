@@ -1,6 +1,6 @@
 {
   "name": "bugglo-mcp",
-  "version": "0.3.1",
+  "version": "0.3.0",
   "mcpName": "io.github.itsnevu/bugglo-mcp",
   "description": "MCP server for Robinhood Chain (4663). Rug checks, ownership, upgradeable-proxy and privileged-function disclosure, read straight from the chain. No API key, no account, no backend. Reports UNKNOWN as a first-class result — a check that did not run is never a check that passed.",
   "type": "module",
