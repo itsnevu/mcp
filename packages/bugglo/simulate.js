@@ -326,6 +326,95 @@ const PROBE_EXIT = [
   },
 ];
 
+/* keccak256("Transfer(address,address,uint256)") — every ERC-20 emits it, and its `to` topic is a
+   list of addresses that have held this token. Hardcoded rather than derived so this file does not
+   have to import a hashing helper just to rebuild a constant. */
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+/* Deliberately small. This search replaces up to 42 storage probes, so it has to stay cheaper than
+   what it replaces — and every extra call is one more chance to trip the public RPC's rate limiter,
+   which surfaces as a failure that looks nothing like rate limiting. 20k blocks is ~35 minutes at
+   chain 4663's 0.1s blocks and still returned ~880 Transfers for an ordinary token. */
+const HOLDER_LOG_SPAN = 20_000n;
+const HOLDER_CANDIDATES = 6;
+/* A hard ceiling on the whole holder search. The public RPC's latency is wildly variable — the same
+   query measured 4s and 30s minutes apart — and this runs inside a rug check that already sits
+   inside a chat turn with a deadline. Better to give up on the nicer method quickly and fall back
+   than to make every caller wait for it. Exceeding this is not an error and not a finding; it just
+   means the synthetic path answers instead. */
+const HOLDER_SEARCH_BUDGET_MS = 6_000;
+/* Mint and burn both show up as Transfers to or from here, and neither is a holder. */
+const ZERO_ADDRESS = getAddress("0x0000000000000000000000000000000000000000");
+
+/**
+ * Find a real holder of `token` we can simulate a sell FROM, so the probe does not have to be
+ * funded by guessing the token's storage layout.
+ *
+ * Returns { address, balance } or null. Never throws: a failure here is a fallback, not an error.
+ */
+async function findRealHolder(token, pool, wanted) {
+  const deadline = Date.now() + HOLDER_SEARCH_BUDGET_MS;
+  const outOfTime = () => Date.now() > deadline;
+  const client = chainClient();
+
+  let logs;
+  try {
+    const head = await client.getBlockNumber();
+    const from = head > HOLDER_LOG_SPAN ? head - HOLDER_LOG_SPAN : 0n;
+    logs = await client.getLogs({ address: token, fromBlock: from, toBlock: "latest" });
+  } catch {
+    return null; // no log index, or the range was refused — fall back to the storage probe
+  }
+  if (outOfTime()) return null;
+
+  const seen = new Set();
+  const candidates = [];
+  /* Newest first: a recent recipient is far likelier to still hold the tokens than an address that
+     received them at the start of the window and has had hours to sell. */
+  for (let i = logs.length - 1; i >= 0 && candidates.length < HOLDER_CANDIDATES; i -= 1) {
+    const log = logs[i];
+    if (log.topics?.[0] !== TRANSFER_TOPIC || !log.topics[2]) continue;
+    const to = getAddress(`0x${log.topics[2].slice(26)}`);
+    /* The pool is excluded deliberately. It is always the largest holder, and selling the pool's
+       own inventory back into itself is not the trade any user is asking about. */
+    if (to === pool || to === ZERO_ADDRESS || seen.has(to)) continue;
+    seen.add(to);
+    candidates.push(to);
+  }
+  if (!candidates.length) return null;
+
+  /* One at a time, and stop as soon as a good enough holder turns up. Firing a dozen calls at once
+     is how a public RPC starts refusing them, and a refusal here used to be reported as "this node
+     cannot do state overrides" — a wrong reason attached to a real failure. */
+  const usable = [];
+  for (const address of candidates) {
+    if (outOfTime()) break;
+    try {
+      const balance = BigInt(
+        (await client.call({ to: token, data: encodeFunctionData({ abi: BALANCE_OF, functionName: "balanceOf", args: [address] }) }))?.data || "0x0"
+      );
+      if (balance === 0n) continue;
+      /* Prefer a plain account. Replacing a live contract's code with the probe would also replace
+         whatever made it a holder, and some of those contracts are the very routers and hooks the
+         swap is about to call. */
+      const code = await client.getBytecode({ address });
+      const entry = { address, balance, isContract: Boolean(code && code !== "0x") };
+      usable.push(entry);
+      if (!entry.isContract && balance >= wanted) return entry; // good enough; stop paying for more
+    } catch {
+      // this candidate is unusable; the next one may not be
+    }
+  }
+  if (!usable.length) return null;
+
+  const rank = (entry) => {
+    const enough = entry.balance >= wanted ? 1 : 0;
+    const plain = entry.isContract ? 0 : 1;
+    return plain * 2 + enough; // a plain account with enough beats everything else
+  };
+  usable.sort((a, b) => rank(b) - rank(a) || (b.balance > a.balance ? 1 : -1));
+  return usable[0];
+}
+
 function unknownExit(note, extra = {}) {
   return { ok: true, status: "UNKNOWN", exits: null, received: null, note, evidence: null, ...extra };
 }
@@ -413,19 +502,6 @@ export async function simulateExit(rawAddress, marketOverride = null) {
   const counterToken = zeroForOne ? token1 : token0;
   const sqrtPriceLimitX96 = zeroForOne ? MIN_SQRT_RATIO + 1n : MAX_SQRT_RATIO - 1n;
 
-  let slot;
-  try {
-    slot = await findBalanceSlot(token, EXIT_PROBE);
-  } catch (e) {
-    if (String(e?.message) === "stateOverrideUnsupported") {
-      return unknownExit("The RPC does not support eth_call state overrides, so an exit cannot be simulated here. UNKNOWN, not PASS.");
-    }
-    return { ok: false, error: `exit simulation failed: ${String(e?.message || e).slice(0, 160)}` };
-  }
-  if (!slot) {
-    return unknownExit("Could not locate the token's balance storage slot, so a funded exit could not be simulated. UNKNOWN, not PASS.");
-  }
-
   /* decimals() is read from the token, so a deployer picks it, and it is about to become an
      EXPONENT. Left unbounded it is an injection point rather than a field:
        - at 78 and above, 10**decimals exceeds uint256 and viem refuses to encode it. That throw
@@ -446,25 +522,73 @@ export async function simulateExit(rawAddress, marketOverride = null) {
     );
   }
 
-  /* Sized in whole tokens rather than as a share of supply: a fixed fraction of a large supply is
-     enough to move the price on a thin pool, and a swap that fails only because it was too big for
-     the liquidity is a fact about the pool, not about the token. Fund double so the probe's own
-     transfer is never the thing that runs out. */
-  const amountIn = 10n ** BigInt(decimals);
+  /* One whole token. Sized in units rather than as a share of supply, because a fixed fraction of a
+     large supply is enough to move the price on a thin pool, and a swap that fails only because it
+     was too big for the liquidity is a fact about the pool, not about the token. */
+  const wholeToken = 10n ** BigInt(decimals);
+
+  /* WHERE THE TOKENS COME FROM — the part that decides how much of the chain this can answer for.
+   *
+   * The original approach funds a synthetic address by overriding the token's balance storage,
+   * which means first FINDING that storage. That works for mainstream ERC-20s and fails completely
+   * for anything else: measured on chain 4663, an entire launchpad family (44-byte EIP-1167 proxies
+   * onto one implementation, carrying millions in liquidity) has balances that are not in the first
+   * 200 integer slots, nor under any ERC-7201 namespace tried, nor under Solady's layout. For those
+   * the simulation could never run at all.
+   *
+   * So: prefer a REAL holder, and inject the probe's code at THEIR address. Their balance is
+   * already there, so no storage override is needed and no layout has to be guessed. Two things
+   * come free with that:
+   *   - every token becomes reachable, whatever its storage looks like;
+   *   - the seller has real history, so a token or hook that gates on holder age, an allowlist, or
+   *     prior activity is tested as it would actually behave, instead of waving through a
+   *     freshly-minted synthetic address it has never seen.
+   * Overriding code at an address changes nothing on chain and cannot touch the holder's funds;
+   * this is still one read-only eth_call. */
+  const holder = await findRealHolder(token, pool, wholeToken);
+
+  let amountIn = wholeToken;
+  const overrides = [];
+  if (holder) {
+    /* Never ask for more than they have. A revert caused by the probe running out of its own
+       tokens would be indistinguishable from the token blocking the sell, which is the one
+       confusion this whole file exists to prevent. */
+    amountIn = holder.balance < wholeToken ? holder.balance : wholeToken;
+    overrides.push({ address: holder.address, code: EXIT_PROBE_RUNTIME });
+  } else {
+    let slot;
+    try {
+      slot = await findBalanceSlot(token, EXIT_PROBE);
+    } catch (e) {
+      if (String(e?.message) === "stateOverrideUnsupported") {
+        return unknownExit("The RPC does not support eth_call state overrides, so an exit cannot be simulated here. UNKNOWN, not PASS.");
+      }
+      return { ok: false, error: `exit simulation failed: ${String(e?.message || e).slice(0, 160)}` };
+    }
+    if (!slot) {
+      return unknownExit(
+        "No holder could be found to simulate a sell from, and the token's balance storage layout " +
+          "could not be located either, so a funded exit could not be simulated. That is a limit of " +
+          "this simulation, not a finding against the token. UNKNOWN, not PASS."
+      );
+    }
+    overrides.push(
+      { address: EXIT_PROBE, code: EXIT_PROBE_RUNTIME },
+      { address: token, stateDiff: [{ slot, value: toBytes32(wholeToken * 2n) }] }
+    );
+  }
+  const seller = holder ? holder.address : EXIT_PROBE;
 
   let raw;
   try {
     const result = await chainClient().call({
-      to: EXIT_PROBE,
+      to: seller,
       data: encodeFunctionData({
         abi: PROBE_EXIT,
         functionName: "probeExit",
         args: [pool, token, zeroForOne, amountIn, sqrtPriceLimitX96, counterToken],
       }),
-      stateOverride: [
-        { address: EXIT_PROBE, code: EXIT_PROBE_RUNTIME },
-        { address: token, stateDiff: [{ slot, value: toBytes32(amountIn * 2n) }] },
-      ],
+      stateOverride: overrides,
     });
     raw = result?.data ?? "0x";
   } catch (error) {
@@ -474,10 +598,10 @@ export async function simulateExit(rawAddress, marketOverride = null) {
       exits: false,
       received: null,
       note:
-        "A funded synthetic holder could not complete a sell through the pool: the swap reverted. " +
+        `${holder ? "A real holder of this token" : "A funded synthetic holder"} could not complete a sell through the pool: the swap reverted. ` + +
         "That is what a blocked transfer, a sell tax the pool will not accept, or a pool that takes " +
         "the tokens and refuses to pay all look like from here. It is a hard signal against exiting.",
-      evidence: { pool, slot, amountIn: amountIn.toString(), reason: String(error?.shortMessage || error?.message || error).slice(0, 140) },
+      evidence: { pool, seller, amountIn: amountIn.toString(), reason: String(error?.shortMessage || error?.message || error).slice(0, 140) },
     };
   }
 
@@ -497,7 +621,7 @@ export async function simulateExit(rawAddress, marketOverride = null) {
       exits: false,
       received: "0",
       note: "The swap completed but returned nothing at all. Tokens left the holder and no value came back — an exit in name only.",
-      evidence: { pool, slot, amountIn: amountIn.toString(), paid: paid.toString() },
+      evidence: { pool, seller, amountIn: amountIn.toString(), paid: paid.toString() },
     };
   }
 
@@ -507,10 +631,10 @@ export async function simulateExit(rawAddress, marketOverride = null) {
     exits: true,
     received: received.toString(),
     note:
-      "A funded synthetic holder completed a full sell through the pool and received value back, at " +
+      `${holder ? "A real holder of this token" : "A funded synthetic holder"} completed a full sell through the pool and received value back, at ` +
       "this block and at this size. That is the strongest read-only evidence of sellability there is — " +
       "it is not a promise: an owner can change the rules in the next transaction, and a token that " +
       "gates on the holder's address may treat a real wallet differently.",
-    evidence: { pool, slot, counterToken, amountIn: amountIn.toString(), paid: paid.toString() },
+    evidence: { pool, seller, counterToken, amountIn: amountIn.toString(), paid: paid.toString(), from: holder ? "real-holder" : "synthetic" },
   };
 }

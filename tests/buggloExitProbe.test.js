@@ -15,8 +15,13 @@ import { readFileSync, existsSync } from "node:fs";
 const CHAIN_CALL = vi.hoisted(() => vi.fn());
 const GET_MARKET = vi.hoisted(() => vi.fn());
 
+/* findRealHolder() reaches for getLogs/getBlockNumber/getBytecode. Left undefined they throw,
+   which findRealHolder treats as "no holder here" and falls back — which is exactly what the older
+   tests below want, so they keep passing untouched. */
+const CLIENT_EXTRAS = vi.hoisted(() => ({}));
+
 vi.mock("../packages/bugglo/chain.js", () => ({
-  chainClient: () => ({ call: CHAIN_CALL }),
+  chainClient: () => ({ call: CHAIN_CALL, ...CLIENT_EXTRAS }),
   getMarket: GET_MARKET,
 }));
 
@@ -51,6 +56,7 @@ function poolReads() {
 beforeEach(() => {
   CHAIN_CALL.mockReset();
   GET_MARKET.mockReset();
+  for (const key of Object.keys(CLIENT_EXTRAS)) delete CLIENT_EXTRAS[key];
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -84,13 +90,17 @@ describe("simulateExit", () => {
     expect(result.note).toMatch(/Uniswap V3 interface/i);
   });
 
-  it("is UNKNOWN when the balance slot cannot be located", async () => {
+  /* Both ways of funding a sell are gone here: the mock client has no getLogs, so no real holder can
+     be found, and balanceOf never echoes MAGIC, so no storage layout can be found either. Neither
+     failure is evidence about the token, and the note has to say so. */
+  it("is UNKNOWN when neither a real holder nor the balance slot can be found", async () => {
     withMarket();
     const reads = poolReads();
     CHAIN_CALL.mockImplementation(async (args) => reads(args) ?? { data: word("0") }); // balanceOf never returns MAGIC
     const result = await simulateExit(TOKEN);
     expect(result.status).toBe("UNKNOWN");
-    expect(result.note).toMatch(/balance storage slot/i);
+    expect(result.note).toMatch(/balance storage layout/i);
+    expect(result.note).toMatch(/not a finding against the token/i);
   });
 
   /* The bug this guard exists for. A node that ignores `code` state overrides leaves nothing at the
@@ -381,5 +391,74 @@ describe("simulateExit — pools it cannot drive must not become accusations", (
     poolWhere({ slot0: () => ({ data: word("1") }), liquidity: () => ({ data: word("de0b6b3a7640000") }) });
     const result = await simulateExit(TOKEN);
     expect(result.status).toBe("EXIT-CLEARS");
+  });
+});
+
+/* Funding the sell from a REAL holder instead of a synthetic one. This is what makes the
+   simulation reach tokens whose storage layout cannot be guessed — measured on chain 4663, an
+   entire launchpad family had balances findable in none of 200 integer slots, no ERC-7201
+   namespace tried, and not Solady's layout. */
+describe("simulateExit — selling from a real holder", () => {
+  const MAGIC = 123456789012345678901234567890n;
+  const HOLDER = "0x600a39873e223c0640138862fB1f939781b1dbA1";
+  const transferLog = (to) => ({
+    topics: [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      `0x${"0".repeat(64)}`,
+      `0x000000000000000000000000${to.slice(2).toLowerCase()}`,
+    ],
+  });
+
+  const withHolder = ({ balance, isContract = false, logs }) => {
+    withMarket();
+    const reads = poolReads();
+    CHAIN_CALL.mockImplementation(async (args) => {
+      const known = reads(args);
+      if (known) return known;
+      if (args.stateOverride?.some((o) => o.code)) return { data: word("1") + word("1").slice(2) };
+      /* Two different balanceOf calls reach here and they must not be confused: the storage probe
+         sends one WITH a stateDiff and expects MAGIC echoed back, while the holder search sends a
+         plain one and expects the candidate's real balance. */
+      if (args.stateOverride?.some((o) => o.stateDiff)) return { data: word(MAGIC.toString(16)) };
+      if (String(args.data || "").startsWith("0x70a08231")) return { data: word(balance.toString(16)) };
+      return { data: word(MAGIC.toString(16)) };
+    });
+    CLIENT_EXTRAS.getBlockNumber = async () => 1_000_000n;
+    CLIENT_EXTRAS.getLogs = async () => logs;
+    CLIENT_EXTRAS.getBytecode = async () => (isContract ? "0x60006000" : "0x");
+  };
+
+  it("sells from a real holder and says so, without touching storage", async () => {
+    withHolder({ balance: 10n ** 20n, logs: [transferLog(HOLDER)] });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("EXIT-CLEARS");
+    expect(result.evidence.from).toBe("real-holder");
+    expect(result.evidence.seller.toLowerCase()).toBe(HOLDER.toLowerCase());
+    expect(result.note).toMatch(/A real holder of this token/);
+  });
+
+  /* The pool is always the largest holder, and selling its own inventory back into itself is not
+     the trade anybody is asking about. */
+  it("never picks the pool itself as the seller", async () => {
+    withHolder({ balance: 10n ** 20n, logs: [transferLog(POOL)] });
+    const result = await simulateExit(TOKEN);
+    expect(result.evidence?.seller?.toLowerCase()).not.toBe(POOL.toLowerCase());
+  });
+
+  /* Asking for more than the holder owns would revert for a reason that has nothing to do with the
+     token, and CANNOT-EXIT is far too strong a thing to say by accident. */
+  it("never asks a holder for more than they hold", async () => {
+    const small = 10n ** 12n; // far under one whole 18-decimal token
+    withHolder({ balance: small, logs: [transferLog(HOLDER)] });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("EXIT-CLEARS");
+    expect(BigInt(result.evidence.amountIn)).toBeLessThanOrEqual(small);
+  });
+
+  it("falls back to the synthetic path when no holder can be found", async () => {
+    withHolder({ balance: 0n, logs: [] });
+    const result = await simulateExit(TOKEN);
+    expect(result.status).toBe("EXIT-CLEARS");
+    expect(result.evidence.from).toBe("synthetic");
   });
 });
