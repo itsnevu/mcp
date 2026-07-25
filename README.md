@@ -1,5 +1,10 @@
 # Bugglo — Agentic AI for Robinhood Chain (Next.js)
 
+[![ci](https://github.com/itsnevu/mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/itsnevu/mcp/actions/workflows/ci.yml)
+[![npm — bugglo](https://img.shields.io/npm/v/bugglo?label=bugglo)](https://www.npmjs.com/package/bugglo)
+[![npm — bugglo-mcp](https://img.shields.io/npm/v/bugglo-mcp?label=bugglo-mcp)](https://www.npmjs.com/package/bugglo-mcp)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A chat UI for Robinhood Chain — built with **Next.js (App Router) + React**, plus an
 API route that answers only through the **RobinX engine + robinx-mcp**.
 
@@ -142,7 +147,7 @@ lib/
   chainData.js         ← app-side wrapper over the `bugglo` package
 packages/              ← published to npm; no dependency on the app
   bugglo/              ← chain.js (the engine) + cli.js + report.js
-  bugglo-mcp/          ← MCP adapter over `bugglo`. Seven tools, chain 4663 only.
+  bugglo-mcp/          ← MCP adapter over `bugglo`. Ten tools, chain 4663 only.
 ```
 
 ## ✅ Verify
