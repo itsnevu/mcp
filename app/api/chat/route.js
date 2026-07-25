@@ -15,6 +15,56 @@ export const dynamic = "force-dynamic";
 
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 30;
+
+/* The largest body a HONEST client can send: 4 images at MAX_IMAGE_DATA_URL_CHARS (2 MB of
+   base64 each) plus text attachments, history and the message, with headroom for JSON overhead.
+   See lib/attachments.js for where those ceilings come from.
+ *
+ * This exists because sanitizeAttachments() runs on a parsed object, and parsing is the
+ * expensive part — req.json() would buffer and decode the whole POST into this process's heap
+ * before a single cap was consulted. One process serves the entire site (deploy/bugglo.service
+ * pins it to one on purpose), and it shares a box with SpacetimeDB and three game servers, so an
+ * unbounded body is not a Bugglo problem, it is a host problem. */
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+function payloadTooLarge() {
+  return Response.json({ error: "Request too large.", tooLarge: true }, { status: 413 });
+}
+
+/* Content-Length is a hint, not a promise — it can be absent (chunked) or simply a lie — so it is
+   only used as a cheap early reject. The stream read below is what actually enforces the ceiling,
+   and it aborts the moment the running total crosses it rather than after the fact. */
+async function readBoundedBody(req) {
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return null;
+  if (!req.body) return "";
+
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(joined);
+}
 const buckets = globalThis.__hoodscopeRateBuckets ?? new Map();
 globalThis.__hoodscopeRateBuckets = buckets;
 
@@ -110,9 +160,12 @@ export async function POST(req) {
   const limited = rateLimit(req, ip);
   if (limited) return limited;
 
+  const raw = await readBoundedBody(req);
+  if (raw === null) return payloadTooLarge();
+
   let body;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }

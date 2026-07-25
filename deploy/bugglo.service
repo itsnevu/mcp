@@ -18,7 +18,11 @@ Environment=NODE_ENV=production
 # caps are per-process by construction: run four workers and ENGINE_GLOBAL_USD_PER_DAY=5
 # quietly becomes a $20/day ceiling — the exact bill the cap exists to prevent. Move the
 # guard to Redis BEFORE ever adding a second worker.
-ExecStart=/usr/bin/npm run start -- -p 3100
+# -H 127.0.0.1: Caddy is the only thing that should ever reach this port. Binding the wildcard
+# also makes X-Forwarded-For meaningful only by firewall policy — and lib/rateLimit.js counts
+# hops from the right precisely because a client-supplied header is worthless. Bind loopback and
+# the trust boundary is enforced by the kernel instead of by a firewall rule nobody re-checks.
+ExecStart=/usr/bin/npm run start -- -p 3100 -H 127.0.0.1
 
 # The agent spawns MCP servers (robinx-mcp, boo-crypto, dexscreener) as child processes.
 # control-group reaping stops a restart from orphaning them holding stdio pipes.
@@ -33,6 +37,24 @@ PrivateTmp=true
 ProtectSystem=full
 ProtectControlGroups=true
 ProtectKernelTunables=true
+ProtectHome=true
+ProtectKernelModules=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+# HARD RESOURCE CEILINGS. This box also runs SpacetimeDB, a WILDER auth server and three
+# Mythreach game servers. Without these, a leaking or hostile MCP child is not a Bugglo outage —
+# it is an everything-on-this-host outage, because the OOM killer picks its victim by memory
+# footprint and has no idea which service anyone cares about.
+#
+# MemoryMax kills this cgroup instead of letting the kernel choose. TasksMax is the fork-bomb
+# stop: the agent spawns npx children that npm-install third-party code at runtime, so the
+# process count is not something this repo fully controls. CPUQuota leaves headroom for the
+# game servers' tick loops, which notice scheduler starvation long before a web app does.
+MemoryMax=1500M
+MemoryHigh=1200M
+TasksMax=256
+CPUQuota=150%
 
 StandardOutput=journal
 StandardError=journal

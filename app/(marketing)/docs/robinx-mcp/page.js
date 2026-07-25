@@ -576,17 +576,31 @@ export default function RobinXMcpPage() {
             <h3>MCP servers get a starved environment</h3>
             <p>
               Servers run as child processes and their output is untrusted. They never receive the
-              process environment — no <code className={styles.inline}>ROBINX_ENGINE_KEY</code>, no{" "}
-              <code className={styles.inline}>AUTH_SECRET</code>, no wallet key. Each server is
-              handed only the variables it explicitly declared, on top of a minimal safe default.
+              whole process environment — no <code className={styles.inline}>ROBINX_ENGINE_KEY</code>,
+              no <code className={styles.inline}>AUTH_SECRET</code>. Each server is handed only the
+              variables it explicitly declared, on top of a minimal safe default. The one exception
+              is deliberate and worth naming: if{" "}
+              <code className={styles.inline}>ROBINX_WALLET_KEY</code> is set, it is declared by the{" "}
+              <code className={styles.inline}>robinx</code> server and forwarded to it, because that
+              is the process that settles x402 payments.
             </p>
           </div>
           <div className={styles.card}>
-            <h3>The agent holds no keys</h3>
+            <h3>The agent holds no key of yours</h3>
             <p>
-              Read tools run server-side. When write and trade tools land, they compile to an{" "}
-              <em>unsigned</em> transaction that your wallet signs. There is no custody path, which
-              means there is no key here to steal.
+              Wallet login is a message signature and nothing else — no transaction, no gas, no
+              allowance. When write and trade tools land, they will compile to an <em>unsigned</em>{" "}
+              transaction that your wallet signs; there is no path by which Bugglo can move your
+              funds.
+            </p>
+            <p>
+              Bugglo can operate one hot key <em>of its own</em>:{" "}
+              <code className={styles.inline}>ROBINX_WALLET_KEY</code> pays for x402 tools in USDC.
+              It is optional and off by default — the public deployment runs without it, which{" "}
+              <code className={styles.inline}>/api/health</code> reports as{" "}
+              <code className={styles.inline}>paidToolsEnabled: false</code>. Where it is enabled it
+              should be a dedicated, low-balance wallet used for nothing else, because a key on a
+              server is a key that can be stolen from that server.
             </p>
           </div>
           <div className={styles.card}>

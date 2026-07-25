@@ -727,16 +727,23 @@ console.log(data.source, data.reply);`}</Code>
           <div className={styles.card}>
             <h3>The agent never holds your keys</h3>
             <p>
-              Read tools run server-side. Write and trade tools compile to an unsigned transaction
-              your wallet signs. There is no custody path, so there is no key to steal from us.
+              Read tools run server-side. Wallet login is a message signature — no transaction, no
+              gas, no allowance. When write and trade tools land, they will compile to an unsigned
+              transaction your wallet signs, so there is no path by which we can move your funds.
+            </p>
+            <p>
+              Bugglo does operate one wallet of its own, optional and off by default, to pay for
+              x402 tools in USDC. It never touches yours.
             </p>
           </div>
           <div className={styles.card}>
-            <h3>Simulate before signature</h3>
+            <h3>Simulate before signature <em>(planned)</em></h3>
             <p>
-              Every state-changing call is dry-run against live chain state first, and the UI shows
-              exactly what leaves your wallet. Approval drains and honeypot sells are caught while
-              walking away is still free.
+              When write and trade tools land, every state-changing call will be dry-run against
+              live chain state first, with the UI showing exactly what leaves your wallet. Today the
+              simulator is read-only and does one job: a sell simulation for honeypot detection.
+              Nothing in Bugglo builds or signs a transaction yet, so do not treat this card as a
+              guarantee covering one you signed elsewhere.
             </p>
           </div>
           <div className={styles.card}>

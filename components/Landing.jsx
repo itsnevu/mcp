@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import s from "@/app/tile-landing.module.css";
 
 /* --- asset base path --- */
@@ -60,12 +61,6 @@ function getCraftIcon(index) {
       return null;
   }
 }
-
-/* --- Supported partner logo list --- */
-const TRUSTED = [
-  "ahptus.svg","antarte.svg","bsustain.svg","curya.png","deltay.svg",
-  "gimmi.svg","invariant.svg","marrakech.svg","propwise.svg","spotgov.svg",
-];
 
 /* --- Bugglo security features rows data --- */
 const CRAFTS = [
@@ -283,7 +278,6 @@ export default function Landing() {
   /* --- Section scroll reveals --- */
   const [craftRef, craftVisible] = useScrollReveal(0.1);
   const [workRef, workVisible] = useScrollReveal(0.1);
-  const [testiRef, testiVisible] = useScrollReveal(0.1);
   const [brandRef, brandVisible] = useScrollReveal(0.1);
   const [valueRef, valueVisible] = useScrollReveal(0.1);
   const [ctaRef, ctaVisible] = useScrollReveal(0.1);
@@ -312,10 +306,10 @@ export default function Landing() {
       <nav className={`${s.nav} ${menuOpen ? s.navOpen : ""}`}>
         <div className={`${s.navInner} ${menuOpen ? s.navOpen : ""}`}>
           <div className={s.navBar}>
-            <a className={s.navLogoLink} href="/">
+            <Link className={s.navLogoLink} href="/">
               <BuggloLogo size={36} className={s.navLogoImg} />
               <span className={s.navLogoText}>Bugglo<span className={s.navLogoTextDot}>.</span></span>
-            </a>
+            </Link>
             <div className={s.navActions}>
               <a href="/app" className={s.navCta} style={{ textDecoration: "none" }}>login</a>
               <button type="button" className={s.navToggle} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}>+</button>
@@ -389,19 +383,9 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Support marquee */}
-        <section className={s.trustedBy}>
-          <h4 className={s.trustedByLabel}>secured &amp; trusted integrations</h4>
-          <div className={s.marqueeOuter}>
-            <div className={s.marqueeTrack}>
-              {[...TRUSTED, ...TRUSTED, ...TRUSTED].map((logo, i) => (
-                <div key={i} className={s.marqueeItem}>
-                  <img src={`${A}/homepage/trustedby/${logo}`} alt="" draggable="false" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* No "trusted integrations" marquee. The logos that were here belonged to ten real
+            companies that have no relationship with this project — claiming them as integrations
+            was a fabricated endorsement and an unlicensed use of their marks. */}
 
         {/* What We Do / Security */}
         <section className={`${s.craftSection} ${s.fadeInUp} ${craftVisible ? s.fadeInUpVisible : ""}`} ref={craftRef} id="craft">
@@ -468,35 +452,10 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className={`${s.testimonials} ${s.fadeInUp} ${testiVisible ? s.fadeInUpVisible : ""}`} ref={testiRef} style={{ position: "relative" }}>
-          {/* Floating animated background fish inside testimonials */}
-          <div style={{ position: "absolute", top: "10%", right: "15%", width: "110px", height: "auto", pointerEvents: "none", opacity: 0.18, zIndex: 0 }}>
-            <img src={`${A}/homepage/animations/introsection/zemanel.gif`} alt="" style={{ width: "100%", height: "auto" }} />
-          </div>
-          
-          <div className={s.testimonialsInner} style={{ position: "relative", zIndex: 10 }}>
-            <div className={s.testimonialQuote}>
-              <p className={s.testimonialText}>
-                Bugglo has completely changed how our trading bots interact with new pools. The pre-trade simulation saved us from three honeypots in the first week.
-              </p>
-              <div className={s.testimonialAuthor}>
-                <img src={`${A}/homepage/testimonials/gimmi.svg`} alt="" className={s.testimonialAuthorImg} />
-                <span className={s.testimonialAuthorName}>Duarte, lead engineer @ AgentCapital</span>
-              </div>
-            </div>
-            <div className={s.testimonialRight}>
-              <h2 className={s.testimonialHeading}>
-                protocols <span className={s.heroItalic}>say things</span>. luckily, some of them are about our security.
-              </h2>
-              <div className={s.testimonialBigQuote} aria-hidden="true">
-                <svg viewBox="0 0 220 160" fill="none" style={{ width: "100%", height: "100%" }}>
-                  <text x="220" y="160" textAnchor="end">&ldquo;</text>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* No testimonials section. There is no real, attributable, consenting user quote to put
+            here yet, and an invented one would be the exact failure this product exists to argue
+            against — a confident claim with nothing behind it. Shipping nothing is the honest
+            default until a genuine quote exists. */}
 
         {/* Security Assured */}
         <section className={`${s.brandCovered} ${s.fadeInUp} ${brandVisible ? s.fadeInUpVisible : ""}`} ref={brandRef}>

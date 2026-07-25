@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # lint + test + build, the same command a human is meant to run before deploying.
+      # It is one script on purpose: when lint failed, the `&&` chain meant the tests and the
+      # production build silently stopped running, and nobody noticed because nothing was watching.
+      - run: npm run verify
+
+      # Nothing in production dependencies may carry a known high or critical advisory.
+      # Moderate is not failed here: the only one outstanding is a Windows-only path traversal in
+      # a transitive MCP dependency with no upstream fix, and production is Linux.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  cli:
+    # `npx bugglo` is how this project reaches a stranger, and it installs the package ALONE —
+    # no workspace, no root node_modules to hoist from. A CLI that only runs inside this repo is
+    # broken for everyone outside it, and nothing else in the test suite would notice.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pack and install bugglo standalone
+        run: |
+          set -euo pipefail
+          npm pack ./packages/bugglo --pack-destination /tmp
+          mkdir -p /tmp/cli-smoke && cd /tmp/cli-smoke
+          npm init -y >/dev/null
+          npm install /tmp/bugglo-*.tgz
+
+      - name: Version, help and limits resolve from a clean install
+        run: |
+          set -euo pipefail
+          cd /tmp/cli-smoke
+          ./node_modules/.bin/bugglo --version
+          ./node_modules/.bin/bugglo --help | grep -q "bugglo rug <address>"
+          ./node_modules/.bin/bugglo limits | grep -q "holderConcentration"
+
+      - name: A bad address exits non-zero rather than reporting a pass
+        run: |
+          set -euo pipefail
+          cd /tmp/cli-smoke
+          if ./node_modules/.bin/bugglo not-an-address; then
+            echo "CLI accepted an invalid address" >&2
+            exit 1
+          fi
+
+  read-only-invariant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Bugglo's entire safety argument is that it cannot move funds: it reads chains and reports.
+      # That property currently holds by convention — one `createWalletClient` in a helper would
+      # end it silently, and no test would fail. Assert it instead.
+      #
+      # The one legitimate signing path is off-chain: personal_sign for wallet login, verified with
+      # viem's verifyMessage. That is proof of address ownership, costs no gas and touches no
+      # contract, so `verifyMessage` is deliberately NOT in this list.
+      - name: Assert no chain-write surface
+        run: |
+          if grep -rnE '\b(writeContract|sendTransaction|eth_sendTransaction|createWalletClient|privateKeyToAccount|sendRawTransaction)\b' \
+               --include='*.js' --include='*.jsx' \
+               app lib components packages; then
+            echo
+            echo "::error::Chain-write surface introduced. Bugglo is read-only with respect to the"
+            echo "::error::chain; every public security claim depends on it. If this is intentional,"
+            echo "::error::change the claims in app/(marketing)/docs/ in the same commit."
+            exit 1
+          fi
+          echo "OK — no chain-write surface."
