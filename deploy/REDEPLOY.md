@@ -145,6 +145,34 @@ ssh root@37.60.232.191 '
 
 ---
 
+## Env values that live only on the server
+
+`.env.local` is gitignored, so nothing below survives a rebuild from a fresh clone. If you ever
+recreate the box, set these by hand — each one is there because its default was wrong in a way
+that took a while to see.
+
+```bash
+MCP_CONNECT_TIMEOUT_MS=20000     # default 8000, and the code doubles it for the deadline
+ENGINE_PRICE_INPUT_PER_MTOK=0.269
+ENGINE_PRICE_OUTPUT_PER_MTOK=0.400
+```
+
+**`MCP_CONNECT_TIMEOUT_MS`.** Five MCP servers start over stdio via `npx`, all spawned at once.
+The 8s default gives a 16s deadline, which is enough on an idle box and not enough right after a
+build — CPU and page cache are still busy, every stdio server misses it, and the fleet comes up
+at 98 tools instead of 121. That is not self-healing: `mcpState` in `lib/liveAgent.js` is a lazy
+singleton that only clears when the fleet fails *completely*, so a partial success is cached for
+the life of the process. Restart is the only recovery. 20s (40s deadline) has cleared it every
+time; the cost is paid by the health probe rather than a user, because nothing warms the fleet
+at boot and the first caller pays the cold start either way.
+
+**`ENGINE_PRICE_*`.** These are what `lib/rateLimit.js` charges against the daily USD caps, and
+they are not fetched from anywhere — a wrong number silently moves the cap. They were 0.214 and
+0.322 against a real `deepseek/deepseek-v3.2` price of 0.269 and 0.400, so every request was
+booked about 20% cheap and `ENGINE_GLOBAL_USD_PER_DAY=5` was really allowing closer to $6.25.
+**Re-check these whenever `ROBINX_ENGINE_MODEL` changes** — the caps are only as honest as these
+two numbers.
+
 ## Still not fixed by this deploy
 
 These need a decision or a purchase, not a restart. Full reasoning is in the audit.
