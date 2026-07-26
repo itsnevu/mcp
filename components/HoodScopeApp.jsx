@@ -35,12 +35,16 @@ function loadChatsFromStorage() {
   }
 }
 
-/* `q` is the agent prompt and stays English; `titleKey` is what the user reads. */
+/* `q` is the agent prompt and stays English; `titleKey` is what the user reads.
+   NVDA at its registry-pinned address, for the same reason as Sidebar.jsx: $HOOD has no
+   official token on this chain, and the bare symbol resolves to an impostor memecoin. */
+const NVDA_ADDR = "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC";
+
 const TRY_CARDS = [
   { icon: "i-shield", titleKey: "suggest.rugCheck", q: "Rug check this contract: 0x" },
   { icon: "i-sparkle", titleKey: "suggest.chainActivity", q: "What's the overall activity on Robinhood Chain right now?" },
-  { icon: "i-trend", titleKey: "suggest.buySellPressure", q: "What's the buy versus sell pressure for $HOOD right now?" },
-  { icon: "i-search", titleKey: "suggest.distress", q: "Check $HOOD for distress signals: liquidity being pulled, sell pressure spiking, holders exiting." },
+  { icon: "i-trend", titleKey: "suggest.buySellPressure", q: `What's the buy versus sell pressure for NVDA (${NVDA_ADDR}) on Robinhood Chain right now?` },
+  { icon: "i-search", titleKey: "suggest.distress", q: `Check NVDA (${NVDA_ADDR}) for distress signals: liquidity being pulled, sell pressure spiking, holders exiting.` },
 ];
 
 export default function HoodScopeApp() {
