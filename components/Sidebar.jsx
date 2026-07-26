@@ -21,6 +21,15 @@ const stroke = {
 
 /* `q` is the prompt sent to the agent and stays English on purpose — the model
    is prompted in English regardless of the UI language. Only `labelKey` is shown. */
+
+/* The example ticker is NVDA at its registry-pinned address (packages/bugglo/registry.js).
+   $HOOD — the obvious on-brand choice — has no official token on this chain; the only
+   on-chain match for the symbol is a memecoin ("HOOD4663") amid a dozen sound-alikes
+   (HOODER, HOODIE, HOODINI...), so a bare symbol would point the agent at an impostor.
+   NVDA is the pinned token with by far the deepest live market. The address travels in
+   the prompt so resolution never has to fall back to a symbol lookup. */
+const NVDA_ADDR = "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC";
+
 const SECTIONS = [
   {
     /* On-chain, not social. There is no 𝕏 server in mcp.json and no social credential in the
@@ -32,7 +41,7 @@ const SECTIONS = [
     items: [
       {
         labelKey: "suggest.buySellPressure",
-        q: "What's the buy versus sell pressure for $HOOD right now?",
+        q: `What's the buy versus sell pressure for NVDA (${NVDA_ADDR}) on Robinhood Chain right now?`,
         icon: (
           <svg viewBox="0 0 24 24">
             <use href="#i-trend" />
@@ -41,7 +50,7 @@ const SECTIONS = [
       },
       {
         labelKey: "suggest.holderMomentum",
-        q: "Is the holder base for $HOOD growing or shrinking?",
+        q: `Is the holder base for NVDA (${NVDA_ADDR}) growing or shrinking?`,
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -53,7 +62,7 @@ const SECTIONS = [
       },
       {
         labelKey: "suggest.whaleFlow",
-        q: "What are the largest holders of $HOOD doing right now — accumulating or distributing?",
+        q: `What are the largest holders of NVDA (${NVDA_ADDR}) doing right now — accumulating or distributing?`,
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M2 19h20l-2-9-4.5 3L12 5 8.5 13 4 10z" />
@@ -62,7 +71,7 @@ const SECTIONS = [
       },
       {
         labelKey: "suggest.liquidityHealth",
-        q: "Is liquidity for $HOOD deepening or being pulled?",
+        q: `Is liquidity for NVDA (${NVDA_ADDR}) deepening or being pulled?`,
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M12 2.7s5.5 6 5.5 10a5.5 5.5 0 0 1-11 0c0-4 5.5-10 5.5-10z" />
@@ -71,7 +80,7 @@ const SECTIONS = [
       },
       {
         labelKey: "suggest.distress",
-        q: "Check $HOOD for distress signals: liquidity being pulled, sell pressure spiking, holders exiting.",
+        q: `Check NVDA (${NVDA_ADDR}) for distress signals: liquidity being pulled, sell pressure spiking, holders exiting.`,
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
