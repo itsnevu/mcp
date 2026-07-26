@@ -75,9 +75,9 @@ const CRAFTS = [
     tags: ["/trending", "live price", "volume monitoring", "active pools", "sparkline"],
   },
   {
-    title: "/sentiment", italic: "& fud",
-    desc: "Scan social channels and onchain metadata to check community sentiment and detect automated FUD or hype loops around any project.",
-    tags: ["/sentiment", "/fud", "social analysis", "onchain signals", "hype detector"],
+    title: "/sentiment", italic: "& distress",
+    desc: "Read sentiment from the money, not the posts. Buy versus sell pressure, holder growth, whale accumulation, and liquidity being pulled — signals an attacker has to pay for to fake.",
+    tags: ["/sentiment", "/distress", "buy/sell pressure", "holder momentum", "liquidity health"],
   },
   {
     title: "/wallet", italic: "analysis",

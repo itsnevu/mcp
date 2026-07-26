@@ -23,21 +23,16 @@ const stroke = {
    is prompted in English regardless of the UI language. Only `labelKey` is shown. */
 const SECTIONS = [
   {
+    /* On-chain, not social. There is no 𝕏 server in mcp.json and no social credential in the
+       environment, so every item here has to be answerable by the tools that are actually
+       connected — buys and sells, holder counts, liquidity, deployer history. An entry that
+       promises social reach puts the model in the position of refusing a menu the app itself
+       offered, which reads as broken even though the refusal is correct. */
     labelKey: "sidebar.section.sentiment",
-    x: true,
     items: [
       {
-        labelKey: "suggest.searchTicker",
-        q: "Search $HOOD ticker sentiment on X",
-        icon: (
-          <svg viewBox="0 0 24 24">
-            <use href="#i-search" />
-          </svg>
-        ),
-      },
-      {
-        labelKey: "suggest.trendingTickers",
-        q: "What are the trending tickers on X right now?",
+        labelKey: "suggest.buySellPressure",
+        q: "What's the buy versus sell pressure for $HOOD right now?",
         icon: (
           <svg viewBox="0 0 24 24">
             <use href="#i-trend" />
@@ -45,8 +40,8 @@ const SECTIONS = [
         ),
       },
       {
-        labelKey: "suggest.topAccounts",
-        q: "Who are the top X accounts talking about $HOOD?",
+        labelKey: "suggest.holderMomentum",
+        q: "Is the holder base for $HOOD growing or shrinking?",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -57,17 +52,26 @@ const SECTIONS = [
         ),
       },
       {
-        labelKey: "suggest.chainTrending",
-        q: "What's trending about Robinhood Chain on X?",
+        labelKey: "suggest.whaleFlow",
+        q: "What are the largest holders of $HOOD doing right now — accumulating or distributing?",
         icon: (
-          <svg viewBox="0 0 24 24">
-            <use href="#i-sparkle" />
+          <svg viewBox="0 0 24 24" {...stroke}>
+            <path d="M2 19h20l-2-9-4.5 3L12 5 8.5 13 4 10z" />
           </svg>
         ),
       },
       {
-        labelKey: "suggest.fud",
-        q: "Run FUD detection for $HOOD",
+        labelKey: "suggest.liquidityHealth",
+        q: "Is liquidity for $HOOD deepening or being pulled?",
+        icon: (
+          <svg viewBox="0 0 24 24" {...stroke}>
+            <path d="M12 2.7s5.5 6 5.5 10a5.5 5.5 0 0 1-11 0c0-4 5.5-10 5.5-10z" />
+          </svg>
+        ),
+      },
+      {
+        labelKey: "suggest.distress",
+        q: "Check $HOOD for distress signals: liquidity being pulled, sell pressure spiking, holders exiting.",
         icon: (
           <svg viewBox="0 0 24 24" {...stroke}>
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -77,11 +81,11 @@ const SECTIONS = [
         ),
       },
       {
-        labelKey: "suggest.communitySentiment",
-        q: "What's the community sentiment for $HOOD?",
+        labelKey: "suggest.chainActivity",
+        q: "What's the overall activity on Robinhood Chain right now?",
         icon: (
-          <svg viewBox="0 0 24 24" {...stroke}>
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+          <svg viewBox="0 0 24 24">
+            <use href="#i-sparkle" />
           </svg>
         ),
       },
@@ -312,14 +316,7 @@ export default function Sidebar({
         </div>
         {SECTIONS.map((sec) => (
           <div key={sec.labelKey}>
-            <div className="subsection-label">
-              {sec.x ? (
-                <svg viewBox="0 0 24 24">
-                  <use href="#i-x" />
-                </svg>
-              ) : null}
-              {t(sec.labelKey)}
-            </div>
+            <div className="subsection-label">{t(sec.labelKey)}</div>
             {sec.items.map((it) => (
               <button className="side-item" key={it.labelKey} onClick={() => onSuggest(it.q)}>
                 {it.icon}

@@ -38,9 +38,9 @@ function loadChatsFromStorage() {
 /* `q` is the agent prompt and stays English; `titleKey` is what the user reads. */
 const TRY_CARDS = [
   { icon: "i-shield", titleKey: "suggest.rugCheck", q: "Rug check this contract: 0x" },
-  { icon: "i-sparkle", titleKey: "suggest.chainTrending", q: "What's trending about Robinhood Chain on X?" },
-  { icon: "i-search", titleKey: "suggest.searchTicker", q: "Search $HOOD ticker sentiment on X" },
-  { icon: "i-trend", titleKey: "suggest.trendingTickers", q: "What are the trending tickers on X right now?" },
+  { icon: "i-sparkle", titleKey: "suggest.chainActivity", q: "What's the overall activity on Robinhood Chain right now?" },
+  { icon: "i-trend", titleKey: "suggest.buySellPressure", q: "What's the buy versus sell pressure for $HOOD right now?" },
+  { icon: "i-search", titleKey: "suggest.distress", q: "Check $HOOD for distress signals: liquidity being pulled, sell pressure spiking, holders exiting." },
 ];
 
 export default function HoodScopeApp() {
