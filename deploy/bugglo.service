@@ -37,10 +37,20 @@ PrivateTmp=true
 ProtectSystem=full
 ProtectControlGroups=true
 ProtectKernelTunables=true
-ProtectHome=true
 ProtectKernelModules=true
 RestrictSUIDSGID=true
 RestrictRealtime=true
+
+# NOT ProtectHome=true. Two of the three MCP children execute out of the npx cache in the
+# app user's home — `node /home/bugglo/.npm/_npx/<hash>/node_modules/.bin/boo-crypto-mcp` and
+# the dexscreener server likewise. Masking /home outright deletes those binaries from the
+# service's view, so boo-crypto and dexscreener die on the next restart and the tool count
+# silently drops. tmpfs hides every other home on this box (the game servers run here too)
+# while BindPaths keeps the one directory npx actually needs, writable — npm takes a lock in
+# _cacache on every exec, so read-only is not enough either.
+ProtectHome=tmpfs
+BindPaths=/home/bugglo/.npm
+BindPaths=/home/bugglo/.config
 
 # HARD RESOURCE CEILINGS. This box also runs SpacetimeDB, a WILDER auth server and three
 # Mythreach game servers. Without these, a leaking or hostile MCP child is not a Bugglo outage —
