@@ -119,6 +119,7 @@ export default function RootLayout({ children }) {
             gets around to asking for it. */}
         <link rel="preconnect" href="https://accounts.google.com" />
         <link rel="dns-prefetch" href="https://accounts.google.com" />
+        <meta name="ory-verify" content="orynth-23ac21e375244595b4ca6a8a1074d25f" />
       </head>
       <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
