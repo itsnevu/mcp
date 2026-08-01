@@ -88,6 +88,9 @@ export const metadata = {
     ...(process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION
       ? { yandex: process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION }
       : {}),
+    other: {
+      "ory-verify": "orynth-23ac21e375244595b4ca6a8a1074d25f",
+    },
   },
 };
 
