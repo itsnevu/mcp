@@ -89,7 +89,7 @@ export const metadata = {
       ? { yandex: process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION }
       : {}),
     other: {
-      "ory-verify": "orynth-23ac21e375244595b4ca6a8a1074d25f",
+      "ory-verify": "orynth-e928af723b9d49739978e32216c1e265",
     },
   },
 };
@@ -119,7 +119,7 @@ export default function RootLayout({ children }) {
             gets around to asking for it. */}
         <link rel="preconnect" href="https://accounts.google.com" />
         <link rel="dns-prefetch" href="https://accounts.google.com" />
-        <meta name="ory-verify" content="orynth-23ac21e375244595b4ca6a8a1074d25f" />
+        <meta name="ory-verify" content="orynth-e928af723b9d49739978e32216c1e265" />
       </head>
       <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
